@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#123f32" />
+  <title>Bumi Kita — Jelajah Perubahan Iklim</title>
+  <meta name="description" content="Media pembelajaran WebAR kartun 3D interaktif tentang perubahan iklim, emisi karbon, penghijauan, dan energi surya." />
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="styles.css?v=14.9.3" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="brand" data-go="landing" aria-label="Kembali ke beranda">
+        <span class="brand-orbit"><span></span></span>
+        <span class="brand-copy"><strong>Bumi Kita</strong><small>Lihat perubahan, temukan solusinya</small></span>
+      </button>
+      <div class="topbar-actions">
+        <button class="ghost-btn" id="markerBtn">Lihat Gambar AR</button>
+        <button class="icon-btn" id="soundToggle" aria-label="Aktif/nonaktifkan suara" title="Narasi">♪</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="view is-active landing-view" id="landing" aria-labelledby="landing-title">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <div class="eyebrow">CERITA IKLIM DI DEPAN MATA</div>
+            <h1 id="landing-title">Lihat perubahan iklim terjadi <span>di atas mejamu.</span></h1>
+            <p>Arahkan kamera ke gambar AR. Amati lingkungan berubah dari asri hingga tercemar, lalu susun delapan langkah untuk memulihkannya.</p>
+            <div class="hero-actions">
+              <button class="secondary-btn" data-go="material">Kenali Perubahannya</button>
+              <span class="hero-scan-hint">Ingin langsung mencoba? Tekan <b>Scan AR</b> di bawah.</span>
+            </div>
+            <div class="hero-meta">
+              <div><strong>360°</strong><span>Putar dan lihat sekeliling</span></div>
+              <div><strong>5 tahap</strong><span>Ikuti perubahannya</span></div>
+              <div><strong>8 aksi</strong><span>Buat lingkungan lebih hijau</span></div>
+            </div>
+          </div>
+
+          <div class="hero-card" aria-hidden="true">
+            <div class="hero-table">
+              <div class="paper-card"></div>
+              <div class="pop-world">
+                <span class="mountain m1"></span><span class="mountain m2"></span>
+                <span class="water-path"></span>
+                <span class="cartoon-house h1"></span><span class="cartoon-house h2"></span>
+                <span class="cartoon-tree tr1"></span><span class="cartoon-tree tr2"></span><span class="cartoon-tree tr3"></span>
+                <span class="cartoon-solar"></span>
+              </div>
+            </div>
+            <div class="hero-card-caption"><b>Satu tempat, lima kondisi</b><span>Amati · Bandingkan · Pulihkan</span></div>
+          </div>
+        </div>
+
+        <div class="learning-strip">
+          <article><span>01</span><div><strong>Siapkan gambarnya</strong><p>Arahkan kamera ke gambar AR.</p></div></article>
+          <article><span>02</span><div><strong>Lihat dunianya</strong><p>Diorama 3D akan muncul di atas meja.</p></div></article>
+          <article><span>03</span><div><strong>Ikuti ceritanya</strong><p>Amati lingkungan berubah tahap demi tahap.</p></div></article>
+          <article><span>04</span><div><strong>Buat lebih hijau</strong><p>Pilih solusi untuk memulihkan lingkungan.</p></div></article>
+        </div>
+      </section>
+
+      <section class="view" id="material" aria-labelledby="material-title">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">LIHAT PERUBAHANNYA</div>
+            <h2 id="material-title">Satu tempat, empat cerita.</h2>
+            <p>Mulai dari alam yang asri, lihat apa yang terjadi saat aktivitas manusia meningkat, lalu cari cara untuk membuatnya hijau kembali.</p>
+          </div>
+          <button class="primary-btn compact" data-go="ar">Lihat Dunia 3D <span>→</span></button>
+        </div>
+        <div class="concept-grid">
+          <article class="concept-card nature-card"><div class="stage-number">01</div><div class="mini-illustration nature-mini"><i></i><b></b><em></em></div><h3>Alam Asri</h3><p>Vegetasi rapat, air bersih, udara segar, dan emisi masih rendah.</p><div class="tag low">Emisi rendah</div></article>
+          <article class="concept-card industry-card"><div class="stage-number">02</div><div class="mini-illustration industry-mini"><i></i><b></b><em></em></div><h3>Aktivitas Industri</h3><p>Pabrik, jalan, kendaraan, dan penggunaan bahan bakar fosil bertambah.</p><div class="tag medium">Emisi meningkat</div></article>
+          <article class="concept-card emission-card"><div class="stage-number">03</div><div class="mini-illustration emission-mini"><i></i><b></b><em></em></div><h3>Emisi Tinggi</h3><p>Udara memburuk, tanah kering, vegetasi rusak, dan sungai tertekan.</p><div class="tag high">Emisi tinggi</div></article>
+          <article class="concept-card solar-card"><div class="stage-number">04</div><div class="mini-illustration solar-mini"><i></i><b></b><em></em></div><h3>Transformasi Hijau</h3><p>Lengkapi 8 atribut Kota Hijau: tata kota, ruang hijau, energi, 3R, bangunan, transportasi, dan komunitas.</p><div class="tag recover">8 indikator</div></article>
+        </div>
+        <aside class="cause-box"><div class="cause-title">Alur sebab–akibat</div><div class="cause-flow"><span>Aktivitas manusia</span><b>→</b><span>Bahan bakar fosil</span><b>→</b><span>Emisi meningkat</span><b>→</b><span>Dampak lingkungan</span><b>→</b><span>Energi bersih + ruang hijau</span></div></aside>
+      </section>
+
+      <section class="view ar-view" id="ar" aria-labelledby="ar-title">
+        <div class="ar-workspace">
+          <div class="ar-headline-row">
+            <div>
+              <div class="eyebrow">JELAJAH DUNIA 3D</div>
+              <h2 id="ar-title">Dunia 3D muncul dari gambar</h2>
+            </div>
+            <div class="camera-actions">
+              <button class="secondary-btn compact" id="demoBtn">Preview 3D</button>
+              <button class="secondary-btn compact" id="immersiveBtn">Layar Penuh</button>
+              <button class="primary-btn compact" id="cameraBtn">Aktifkan Kamera</button>
+            </div>
+          </div>
+
+          <div class="secure-context-note" id="secureContextNote" hidden>
+            <strong>Kamera browser memerlukan HTTPS/localhost.</strong>
+            <span>Android lokal: gunakan <code>start-android-usb.bat</code>. iPhone/iPad: buka dari hosting HTTPS.</span>
+          </div>
+
+          <div class="ar-canvas-shell">
+            <div class="ar-stage" id="arStage">
+              <div id="mindarContainer" class="mindar-container"></div>
+              <div class="ar-loading" id="arLoading"><span></span><b>Menyiapkan dunia kartun 3D…</b></div>
+              <div class="camera-placeholder ar-guide">
+                <div class="camera-symbol">
+                  <span class="scan-corners"></span>
+                  <b>AR</b>
+                </div>
+                <strong>Aktifkan kamera untuk mulai tracking</strong>
+                <span>Arahkan kamera ke gambar AR. Pastikan seluruh gambar terlihat jelas agar dunia 3D dapat muncul.</span>
+                <button class="viewport-camera-start" id="viewportCameraStart" type="button">Aktifkan Kamera</button>
+              </div>
+
+              <div class="tracking-reticle" id="trackingReticle" aria-hidden="true">
+                <i></i><span>Arahkan kamera ke gambar AR</span>
+              </div>
+
+              <button class="immersive-close" id="immersiveClose" type="button" aria-label="Keluar dari layar penuh">×</button>
+
+              <div class="ar-status compact-status" id="arStatus"><span></span><b id="arStatusText">Kamera belum aktif</b></div>
+              <div class="stage-chip" id="stageChip">Tahap 1 / 5</div>
+
+              <div class="live-flow-hud" id="liveFlowHud">
+                <div class="live-flow-copy">
+                  <small id="liveKicker">KONDISI AWAL</small>
+                  <strong id="liveHeadline">Lingkungan masih seimbang</strong>
+                  <span id="liveHint">Gerakkan kamera mengelilingi gambar untuk melihat dunia dari segala sisi.</span>
+                </div>
+                <div class="live-flow-meter" aria-label="Indikator emisi"><i id="liveEmissionBar" style="width:18%"></i></div>
+                <button class="live-story-action" id="liveStoryAction" type="button">Mulai Perubahan →</button>
+              </div>
+
+              <div class="stage-transition" id="stageTransition" aria-live="polite">
+                <small id="transitionKicker">TAHAP BERIKUTNYA</small>
+                <strong id="transitionTitle">Aktivitas Industri</strong>
+              </div>
+
+              <div class="ar-hotspots" id="arHotspots" aria-label="Hotspot edukatif">
+                <button class="hotspot h-factory" data-hotspot="factory" aria-label="Informasi pabrik"><span>!</span></button>
+                <button class="hotspot h-river" data-hotspot="river" aria-label="Informasi sungai"><span>!</span></button>
+                <button class="hotspot h-ecosystem" data-hotspot="ecosystem" aria-label="Informasi ekosistem"><span>!</span></button>
+              </div>
+
+              <div class="drag-ghost asset-drag-ghost" id="dragGhost" hidden></div>
+              <div class="placement-feedback" id="placementFeedback" hidden></div>
+            </div>
+          </div>
+
+          <div class="ar-info-strip">
+            <div class="stage-copy">
+              <small id="storyKicker">KONDISI AWAL</small>
+              <strong id="storyHeadline">Lingkungan masih seimbang</strong>
+              <p id="storyBody">Putar diorama 360° dengan satu jari. Amati gunung, sungai, rumah, dan vegetasi sebelum perubahan dimulai.</p>
+            </div>
+            <div class="emission-compact">
+              <div><span>Emisi</span><strong id="emissionValue">18%</strong></div>
+              <div class="meter"><i id="emissionBar" style="width:18%"></i></div>
+            </div>
+            <button class="story-action" id="storyAction">Mulai Perubahan →</button>
+          </div>
+
+          <div class="placement-shelf" id="placementHud" hidden>
+            <div class="placement-shelf-title">
+              <div><small>8 ATRIBUT KOTA HIJAU</small><strong>Lengkapi indikator Kota Hijau di dalam diorama</strong></div>
+              <button class="mini-reset" id="resetPlacement" type="button">Reset</button>
+            </div>
+            <div class="asset-tray">
+              <div class="asset-card" title="Perencanaan kota yang ramah lingkungan">
+                <div class="asset-drag-handle" data-place="plan" role="button" aria-label="Tambahkan rancangan kota hijau">
+                  <canvas id="planToolCanvas" width="180" height="180"></canvas>
+                </div>
+                <span>Rancang Kota Hijau</span><small>Kota ramah lingkungan</small>
+              </div>
+              <div class="asset-card" title="Ketersediaan ruang terbuka hijau">
+                <div class="asset-drag-handle" data-place="tree" role="button" aria-label="Tambahkan ruang hijau">
+                  <canvas id="treeToolCanvas" width="180" height="180"></canvas>
+                </div>
+                <span>Ruang Hijau</span><small>Ruang terbuka hijau</small>
+              </div>
+              <div class="asset-card" title="Konsumsi energi yang efisien">
+                <div class="asset-drag-handle" data-place="efficiency" role="button" aria-label="Tambahkan solusi hemat energi">
+                  <canvas id="efficiencyToolCanvas" width="180" height="180"></canvas>
+                </div>
+                <span>Hemat Energi</span><small>Konsumsi efisien</small>
+              </div>
+              <div class="asset-card" title="Pengelolaan energi yang efisien">
+                <div class="asset-drag-handle" data-place="solar" role="button" aria-label="Tambahkan pengelolaan energi">
+                  <canvas id="solarToolCanvas" width="180" height="180"></canvas>
+                </div>
+                <span>Kelola Energi</span><small>Pengelolaan efisien</small>
+              </div>
+              <div class="asset-card" title="Pengelolaan limbah dengan prinsip 3R">
+                <div class="asset-drag-handle" data-place="waste" role="button" aria-label="Tambahkan pengelolaan limbah 3R">
+                  <canvas id="wasteToolCanvas" width="180" height="180"></canvas>
+                </div>
+                <span>Limbah 3R</span><small>Kurangi · Pakai ulang · Daur ulang</small>
+              </div>
+              <div class="asset-card" title="Bangunan hemat energi">
+                <div class="asset-drag-handle" data-place="building" role="button" aria-label="Tambahkan bangunan hemat energi">
+                  <canvas id="buildingToolCanvas" width="180" height="180"></canvas>
+                </div>
+                <span>Bangunan Hemat</span><small>Hemat energi</small>
+              </div>
+              <div class="asset-card" title="Penerapan sistem transportasi yang berkelanjutan">
+                <div class="asset-drag-handle" data-place="ev" role="button" aria-label="Tambahkan transportasi hijau">
+                  <canvas id="evToolCanvas" width="180" height="180"></canvas>
+                </div>
+                <span>Transportasi Hijau</span><small>Sistem berkelanjutan</small>
+              </div>
+              <div class="asset-card" title="Peningkatan peran masyarakat sebagai komunitas hijau">
+                <div class="asset-drag-handle" data-place="community" role="button" aria-label="Tambahkan komunitas hijau">
+                  <canvas id="communityToolCanvas" width="180" height="180"></canvas>
+                </div>
+                <span>Komunitas Hijau</span><small>Peran Masyarakat</small>
+              </div>
+
+              <div class="recovery-progress green-city-progress">
+                <div class="recovery-copy"><span>Indikator Kota Hijau</span><strong id="recoveryValue">0 / 8</strong></div>
+                <div class="recovery-meter"><i id="recoveryBar"></i></div>
+                <small id="recoveryHint">Lengkapi seluruh 8 atribut Kota Hijau untuk membuka Tahap 5.</small>
+              </div>
+
+              <div class="placement-stats green-city-stats" id="placementStats">
+                <div><strong id="planCount">0</strong><span>Tata Kota</span></div>
+                <div><strong id="treeCount">0</strong><span>RTH</span></div>
+                <div><strong id="efficiencyCount">0</strong><span>Konsumsi</span></div>
+                <div><strong id="solarCount">0</strong><span>Energi</span></div>
+                <div><strong id="wasteCount">0</strong><span>3R</span></div>
+                <div><strong id="buildingCount">0</strong><span>Bangunan</span></div>
+                <div><strong id="evCount">0</strong><span>Transport</span></div>
+                <div><strong id="communityCount">0</strong><span>Komunitas</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stage-rail">
+            <button class="story-step is-active" data-stage-jump="0"><span>1</span><b>Alam</b></button>
+            <i></i>
+            <button class="story-step" data-stage-jump="1"><span>2</span><b>Industri</b></button>
+            <i></i>
+            <button class="story-step" data-stage-jump="2"><span>3</span><b>Emisi</b></button>
+            <i></i>
+            <button class="story-step" data-stage-jump="3"><span>4</span><b>Pemulihan</b></button>
+            <i></i>
+            <button class="story-step" data-stage-jump="4"><span>5</span><b>Hijau</b></button>
+          </div>
+
+          <div class="ar-detail-panel" id="arDetailPanel">
+            <div><small>SEDANG DIAMATI</small><h3 id="stageTitle">Alam Asri</h3><p id="stageText">Lingkungan masih didominasi vegetasi, air bersih, dan aktivitas manusia dengan emisi rendah.</p></div>
+            <ul id="observeList"><li>Jumlah pepohonan</li><li>Kondisi air dan udara</li><li>Sumber aktivitas manusia</li></ul>
+            <button class="primary-btn compact" id="quizFromAr" disabled>Quiz terkunci</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="quiz" aria-labelledby="quiz-title">
+        <div class="quiz-shell">
+          <div class="quiz-head">
+            <div><div class="eyebrow">EVALUASI</div><h2 id="quiz-title">Kuis Pemahaman</h2><p>Jawab lima pertanyaan setelah menyelesaikan pengalaman AR.</p></div>
+            <div class="quiz-progress"><span id="quizCount">1/5</span><div><i id="quizProgressBar"></i></div></div>
+          </div>
+          <div class="question-card" id="questionCard"></div>
+          <div class="quiz-nav"><button class="secondary-btn" id="quizPrev">← Sebelumnya</button><button class="primary-btn" id="quizNext">Berikutnya →</button></div>
+        </div>
+      </section>
+
+      <section class="view" id="result" aria-labelledby="result-title">
+        <div class="result-card">
+          <div class="score-ring"><div><strong id="scoreValue">0</strong><span>/ 100</span></div></div>
+          <div class="result-copy">
+            <div class="eyebrow">HASIL BELAJAR</div>
+            <h2 id="result-title">Eksplorasi selesai</h2>
+            <p id="resultMessage">Hasil kuis akan tampil di sini.</p>
+            <div class="result-stats"><div><strong id="correctValue">0</strong><span>Jawaban benar</span></div><div><strong>5</strong><span>Tahap AR</span></div><div><strong id="resultLabel">—</strong><span>Kategori</span></div></div>
+            <div class="result-actions"><button class="primary-btn" data-go="ar">Ulangi AR</button><button class="secondary-btn" id="retryQuiz">Ulangi Kuis</button><button class="ghost-btn" data-go="landing">Beranda</button></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="bottom-dock" aria-label="Navigasi utama">
+    <button class="dock-item" data-go="landing" data-dock="landing">
+      <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.4 12 3.5l8.5 6.9v8.1a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M9 20.5v-6h6v6"/></svg>
+      <b>Beranda</b>
+    </button>
+    <button class="dock-item" data-go="material" data-dock="material">
+      <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5h5.3A2.7 2.7 0 0 1 12 7.2v12.3a3.8 3.8 0 0 0-3.2-1.7H4z"/><path d="M20 4.5h-5.3A2.7 2.7 0 0 0 12 7.2v12.3a3.8 3.8 0 0 1 3.2-1.7H20z"/></svg>
+      <b>Materi</b>
+    </button>
+    <button class="scan-dock" id="scanDock" aria-label="Scan gambar AR">
+      <span class="scan-rings"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M12 6H8a2 2 0 0 0-2 2v4M20 6h4a2 2 0 0 1 2 2v4M26 20v4a2 2 0 0 1-2 2h-4M12 26H8a2 2 0 0 1-2-2v-4"/><circle cx="16" cy="16" r="4"/></svg></span>
+      <b>Scan AR</b>
+    </button>
+    <button class="dock-item" id="stageDock" data-dock="stage">
+      <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19v-4M12 19V9M19 19V5"/><path d="M3 21h18"/></svg>
+      <b>Progres</b>
+    </button>
+    <button class="dock-item" id="quizDock" data-dock="quiz">
+      <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="m8.5 12.5 2.2 2.2 4.8-5"/></svg>
+      <b>Kuis</b>
+    </button>
+  </nav>
+
+  <dialog id="markerModal" class="marker-modal">
+    <button class="modal-close" id="markerClose" aria-label="Tutup">×</button>
+    <div class="modal-copy">
+      <div class="eyebrow">GAMBAR UNTUK SCAN AR</div>
+      <h2>Siapkan gambar AR ini</h2>
+      <p>Cetak gambar ini atau tampilkan di layar lain. Letakkan di tempat yang datar dan terang, lalu arahkan kamera hingga seluruh gambar terlihat.</p>
+    </div>
+    <img src="assets/climate-single-anchor-v14.png" alt="Gambar AR Bumi Kita" />
+    <div class="modal-actions">
+      <a class="primary-btn link-btn" href="assets/climate-single-anchor-v14.png" target="_blank" rel="noopener">Buka Gambar AR</a>
+      <a class="secondary-btn link-btn" href="print-single-anchor-v14.html" target="_blank" rel="noopener">Cetak 100 × 100 mm</a>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="ar-cartoon.js?v=14.9.3"></script>
+  <script src="app.js?v=14.8.3"></script>
+</body>
+</html>

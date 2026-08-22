@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Android Camera Diagnostic</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#101614;color:#eef5f1}
+  .wrap{max-width:780px;margin:auto;padding:16px}
+  h1{font-size:20px;margin:0 0 12px}
+  .card{background:#17211e;border:1px solid #2d3c37;border-radius:16px;padding:12px;margin:12px 0}
+  video,canvas{width:100%;aspect-ratio:3/4;object-fit:cover;background:#000;border-radius:12px;display:block}
+  button,select{width:100%;padding:13px;border:0;border-radius:12px;margin-top:10px;font-size:16px}
+  button{background:#a9ea6f;color:#17301d;font-weight:700}
+  select{background:#eef5f1;color:#14201c}
+  pre{white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.45;background:#0c110f;padding:12px;border-radius:12px;max-height:330px;overflow:auto}
+  .ok{color:#a9ea6f}.warn{color:#ffd26f}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Android Camera Diagnostic</h1>
+
+  <div class="card">
+    <button id="start">Aktifkan Kamera</button>
+    <select id="devices"><option>Belum ada daftar kamera</option></select>
+    <button id="switch">Pakai Kamera Terpilih</button>
+  </div>
+
+  <div class="card">
+    <b>RAW &lt;video&gt;</b>
+    <video id="video" autoplay muted playsinline></video>
+  </div>
+
+  <div class="card">
+    <b>Canvas hasil drawImage(video)</b>
+    <canvas id="canvas" width="360" height="640"></canvas>
+  </div>
+
+  <div class="card">
+    <b>Diagnostik</b>
+    <pre id="log"></pre>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const video=$('video'), canvas=$('canvas'), ctx=canvas.getContext('2d',{willReadFrequently:true});
+const logEl=$('log'), devicesEl=$('devices');
+let stream=null, raf=0;
+
+function log(...a){
+  const s=a.map(v=>typeof v==='string'?v:JSON.stringify(v,null,2)).join(' ');
+  logEl.textContent += s+'\n';
+  logEl.scrollTop=logEl.scrollHeight;
+  console.log(...a);
+}
+
+function stopStream(){
+  cancelAnimationFrame(raf);
+  if(stream){
+    for(const t of stream.getTracks()) t.stop();
+    stream=null;
+  }
+  video.srcObject=null;
+}
+
+function frameStats(){
+  try{
+    const d=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+    let sum=0,sum2=0,n=0;
+    for(let i=0;i<d.length;i+=64){
+      const y=(d[i]*77+d[i+1]*150+d[i+2]*29)>>8;
+      sum+=y; sum2+=y*y; n++;
+    }
+    const mean=sum/Math.max(1,n);
+    const variance=sum2/Math.max(1,n)-mean*mean;
+    return {mean:+mean.toFixed(1),variance:+variance.toFixed(1)};
+  }catch(e){ return {error:String(e)} }
+}
+
+function loop(){
+  if(video.readyState>=2 && video.videoWidth){
+    const sw=video.videoWidth, sh=video.videoHeight;
+    const dw=canvas.width, dh=canvas.height;
+    const scale=Math.max(dw/sw,dh/sh);
+    const cw=dw/scale, ch=dh/scale;
+    const sx=(sw-cw)/2, sy=(sh-ch)/2;
+    try{
+      ctx.drawImage(video,sx,sy,cw,ch,0,0,dw,dh);
+    }catch(e){}
+  }
+  raf=requestAnimationFrame(loop);
+}
+
+async function listDevices(){
+  const ds=await navigator.mediaDevices.enumerateDevices();
+  const cams=ds.filter(d=>d.kind==='videoinput');
+  devicesEl.innerHTML='';
+  cams.forEach((d,i)=>{
+    const o=document.createElement('option');
+    o.value=d.deviceId;
+    o.textContent=d.label||`Camera ${i+1}`;
+    devicesEl.appendChild(o);
+  });
+  log('videoinput:',cams.map((d,i)=>({i,label:d.label,deviceId:d.deviceId.slice(0,8)+'...'})));
+  return cams;
+}
+
+function chooseRear(cams){
+  const rx=/(back|rear|environment|wide|ultra|main|camera 0)/i;
+  const front=/(front|user|selfie)/i;
+  return cams.find(d=>rx.test(d.label)&&!front.test(d.label))
+      || cams.find(d=>!front.test(d.label))
+      || cams[0];
+}
+
+async function startWithDevice(deviceId=null){
+  stopStream();
+  logEl.textContent='';
+  log('secureContext:',window.isSecureContext);
+  log('userAgent:',navigator.userAgent);
+  log('mediaDevices:',!!navigator.mediaDevices);
+
+  const constraints={
+    audio:false,
+    video: deviceId
+      ? {deviceId:{exact:deviceId},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30}}
+      : {facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30}}
+  };
+
+  try{
+    stream=await navigator.mediaDevices.getUserMedia(constraints);
+  }catch(e){
+    log('getUserMedia gagal:',e.name,e.message);
+    if(!deviceId){
+      log('mencoba fallback constraints sederhana...');
+      stream=await navigator.mediaDevices.getUserMedia({audio:false,video:true});
+    }else throw e;
+  }
+
+  video.srcObject=stream;
+  await video.play();
+
+  await new Promise(resolve=>{
+    if(video.videoWidth) return resolve();
+    video.onloadedmetadata=()=>resolve();
+    setTimeout(resolve,1800);
+  });
+
+  const track=stream.getVideoTracks()[0];
+  log('track.label:',track?.label);
+  log('track.settings:',track?.getSettings?.()||{});
+  log('video size:',video.videoWidth,video.videoHeight,'readyState:',video.readyState);
+
+  const cams=await listDevices();
+  const current=track?.getSettings?.().deviceId;
+  if(current) devicesEl.value=current;
+
+  loop();
+
+  setTimeout(()=>{
+    log('canvas frame stats:',frameStats());
+    log('Interpretasi: variance sangat kecil (~0-5) biasanya frame hampir polos/putih/hitam.');
+  },1200);
+}
+
+$('start').onclick=async()=>{
+  try{
+    await startWithDevice();
+    const cams=await listDevices();
+    const rear=chooseRear(cams);
+    if(rear){
+      log('rear candidate:',rear.label||'(tanpa label)');
+      devicesEl.value=rear.deviceId;
+    }
+  }catch(e){log('ERROR:',e.name,e.message)}
+};
+
+$('switch').onclick=async()=>{
+  try{
+    await startWithDevice(devicesEl.value);
+  }catch(e){log('ERROR switch:',e.name,e.message)}
+};
+
+window.addEventListener('beforeunload',stopStream);
+</script>
+</body>
+</html>
