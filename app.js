@@ -69,15 +69,23 @@
       observe:['Vegetasi rapat dan sungai bersih','Mobil, motor, dan warga tetap beraktivitas','Aktivitas manusia belum menekan lingkungan secara berlebihan']
     },
     {
-      title:'Aktivitas Manusia Meningkat', emission:56, kicker:'INDUSTRIALISASI & KONSUMSI',
-      headline:'Kawasan mulai padat dan tidak teratur',
-      body:'Pabrik beroperasi, kendaraan menumpuk, air terbuang, dan sampah mulai tercecer. Bandingkan dengan kondisi awal.',
-      action:'Lihat Dampaknya →',
-      text:'Aktivitas manusia meningkat: industri berkembang, lalu lintas semakin padat, penggunaan air menjadi boros, sampah tidak dikelola dengan baik, dan ruang hijau berkurang.',
-      observe:['Pabrik dan kendaraan makin banyak','Terjadi pemborosan/kebocoran air','Sampah tercecer dan kawasan mulai chaos']
+      title:'Aktivitas Mulai Meningkat', emission:38, kicker:'TEKANAN RINGAN',
+      headline:'Kawasan mulai berkembang',
+      body:'Satu pabrik mulai aktif, kendaraan bertambah, dan beberapa rumah mulai memakai AC. Lingkungan masih hijau, tetapi tekanan mulai terlihat.',
+      action:'Lihat Peningkatan →',
+      text:'Aktivitas pabrik mulai meningkat. Jumlah mobil dan sepeda motor bertambah, penggunaan AC di rumah mulai terlihat, tetapi tanah dan vegetasi belum langsung berubah cokelat.',
+      observe:['Aktivitas pabrik mulai meningkat','Jumlah kendaraan mulai bertambah','Penggunaan AC di rumah mulai meningkat']
     },
     {
-      title:'Emisi Karbon Tinggi', emission:92, kicker:'KRISIS EMISI',
+      title:'Aktivitas Semakin Padat', emission:66, kicker:'TEKANAN SEDANG',
+      headline:'Sumber emisi bertambah bertahap',
+      body:'Area pabrik meluas, lalu lintas semakin ramai, unit AC bertambah, sampah mulai menumpuk, dan warna lingkungan perlahan mengering.',
+      action:'Lihat Kondisi Terparah →',
+      text:'Tekanan lingkungan memburuk secara bertahap. Pabrik dan cerobong bertambah, kendaraan semakin banyak, penggunaan AC meningkat, vegetasi menipis, dan tanah mulai menguning kecokelatan.',
+      observe:['Aktivitas pabrik meningkat dan kawasan industri meluas','Jumlah mobil dan sepeda motor bertambah','Penggunaan AC di rumah meningkat']
+    },
+    {
+      title:'Emisi Karbon Sangat Tinggi', emission:94, kicker:'KRISIS EMISI',
       headline:'Tekanan lingkungan mencapai puncak',
       body:'Asap, kemacetan, sampah, penggunaan air yang tidak efisien, tanah kering, dan kerusakan vegetasi terjadi bersamaan.',
       action:'Mulai Pemulihan →',
@@ -89,7 +97,7 @@
       headline:'Lengkapi delapan indikator Kota Hijau',
       body:'Drag delapan aset 3D yang mewakili perencanaan kota, ruang terbuka hijau, konsumsi energi, pengelolaan energi, limbah 3R, bangunan hemat energi, transportasi berkelanjutan, dan komunitas hijau.',
       action:'Lengkapi 8 Indikator',
-      text:'Setiap aset mewakili satu atribut Kota Hijau. Tahap 5 terbuka setelah seluruh delapan indikator terpenuhi.',
+      text:'Setiap aset mewakili satu atribut Kota Hijau. Tahap 6 terbuka setelah seluruh delapan indikator terpenuhi.',
       observe:['Perencanaan kota dan ruang terbuka hijau','Efisiensi energi, pengelolaan energi, limbah 3R, dan bangunan hemat energi','Transportasi berkelanjutan serta peran masyarakat sebagai komunitas hijau']
     },
     {
@@ -101,6 +109,10 @@
       observe:['Ruang terbuka hijau dan bangunan hemat energi terlihat jelas','Energi dan limbah dikelola lebih efisien','Transportasi berkelanjutan dan komunitas hijau aktif']
     }
   ];
+  const STAGE_COUNT=stageData.length;
+  const SEVERE_STAGE=3;
+  const RECOVERY_STAGE=4;
+  const FINAL_STAGE=5;
 
   const hotspotData = {
     factory:['Pabrik & bahan bakar fosil','Pembakaran bahan bakar fosil pada aktivitas industri meningkatkan emisi gas rumah kaca dan polutan udara.'],
@@ -221,7 +233,7 @@
           :'Lengkapi seluruh atribut Kota Hijau.';
     }
 
-    if(currentStage===3){
+    if(currentStage===RECOVERY_STAGE){
       storyAction.textContent=recoveryReady?'Lihat Kota Hijau →':`${indicatorCount} / 8 Indikator`;
       storyAction.classList.toggle('is-disabled',!recoveryReady);
 
@@ -242,21 +254,21 @@
   }
 
   async function updateStage(i,{force=false,announce=true}={}){
-    const next=Math.max(0,Math.min(4,i));
-    if(next===4&&!recoveryReady){showToast('Lengkapi seluruh 8 atribut Kota Hijau terlebih dahulu.');return;}
+    const next=Math.max(0,Math.min(FINAL_STAGE,i));
+    if(next===FINAL_STAGE&&!recoveryReady){showToast('Lengkapi seluruh 8 atribut Kota Hijau terlebih dahulu.');return;}
     if(!force&&next>maxStageReached+1){showToast('Selesaikan tahap sebelumnya terlebih dahulu.');return;}
     currentStage=next;maxStageReached=Math.max(maxStageReached,currentStage);
     const d=stageData[currentStage];
-    stageChip.textContent=`Tahap ${currentStage+1} / 5`;
+    stageChip.textContent=`Tahap ${currentStage+1} / ${STAGE_COUNT}`;
     stageTitle.textContent=d.title;stageText.textContent=d.text;
     observeList.innerHTML=d.observe.map(x=>`<li>${x}</li>`).join('');
     storyKicker.textContent=d.kicker;storyHeadline.textContent=d.headline;storyBody.textContent=d.body;
     storyAction.textContent=d.action;storyAction.classList.remove('is-disabled');
     if(liveKicker)liveKicker.textContent=d.kicker;
     if(liveHeadline)liveHeadline.textContent=d.headline;
-    if(liveHint)liveHint.textContent=currentStage===3
+    if(liveHint)liveHint.textContent=currentStage===RECOVERY_STAGE
       ?'Lengkapi 8 atribut Kota Hijau melalui toolbar aset 3D.'
-      :currentStage===4
+      :currentStage===FINAL_STAGE
         ?'Bandingkan langit, sungai, vegetasi, dan energi bersih dengan tahap emisi tinggi.'
         :'Gerakkan kamera ke kiri dan kanan; sudut vertikal dijaga tetap stabil.';
     if(liveStoryAction){
@@ -264,12 +276,12 @@
       liveStoryAction.classList.remove('is-disabled');
     }
     setEmission(d.emission);setProgress(currentStage);
-    hotspotWrap?.classList.toggle('show',currentStage===2);
-    $('arStage')?.classList.toggle('stage-polluted',currentStage===2||currentStage===3);
-    $('arStage')?.classList.toggle('stage-recovered',currentStage===4);
-    if(placementHud)placementHud.hidden=currentStage!==3;
-    if(currentStage===3)setRecoveryUI(window.RealisticAR?.recoveryState||undefined);
-    else if(currentStage===4){recoveryReady=true;quizFromAr.disabled=false;quizFromAr.textContent='Lanjut Kuis';}
+    hotspotWrap?.classList.toggle('show',currentStage===SEVERE_STAGE);
+    $('arStage')?.classList.toggle('stage-polluted',currentStage===SEVERE_STAGE||currentStage===RECOVERY_STAGE);
+    $('arStage')?.classList.toggle('stage-recovered',currentStage===FINAL_STAGE);
+    if(placementHud)placementHud.hidden=currentStage!==RECOVERY_STAGE;
+    if(currentStage===RECOVERY_STAGE)setRecoveryUI(window.RealisticAR?.recoveryState||undefined);
+    else if(currentStage===FINAL_STAGE){recoveryReady=true;quizFromAr.disabled=false;quizFromAr.textContent='Lanjut Kuis';}
     else{recoveryReady=false;quizFromAr.disabled=true;quizFromAr.textContent='Quiz terkunci';}
     if(announce&&stageTransition&&currentStage>0){
       if(transitionKicker)transitionKicker.textContent=d.kicker;
@@ -287,12 +299,12 @@
 
   storyAction?.addEventListener('click',async()=>{
     if(transitionBusy)return;
-    if(currentStage===4)return go('quiz');
-    if(currentStage===3){
+    if(currentStage===FINAL_STAGE)return go('quiz');
+    if(currentStage===RECOVERY_STAGE){
       if(!recoveryReady)return showToast('Lengkapi seluruh 8 atribut Kota Hijau terlebih dahulu.');
     }
     transitionBusy=true;
-    const msgs=['Dunia mulai berubah…','Emisi meningkat dan lingkungan memburuk…','Mode drag & drop 3D aktif.','Solusi bekerja — lingkungan mulai pulih…'];
+    const msgs=['Aktivitas mulai meningkat…','Pabrik, kendaraan, dan AC semakin bertambah…','Kondisi mencapai tahap paling parah…','Mode drag & drop 3D aktif.','Solusi bekerja — lingkungan mulai pulih…'];
     showToast(msgs[currentStage],3000);
     await updateStage(currentStage+1);
     transitionBusy=false;
@@ -393,12 +405,12 @@
     setTimeout(()=>document.querySelector('.stage-rail')?.scrollIntoView({behavior:'smooth',block:'center'}),80);
   });
   quizDock?.addEventListener('click',()=>{
-    if(currentStage===4&&recoveryReady)return go('quiz');
+    if(currentStage===FINAL_STAGE&&recoveryReady)return go('quiz');
     showToast('Selesaikan pemulihan dan lihat lingkungan hijau terlebih dahulu.');
     if(currentView!=='ar')go('ar');
   });
   quizFromAr?.addEventListener('click',()=>{
-    if(currentStage!==4||!recoveryReady)return showToast('Lihat hasil lingkungan hijau terlebih dahulu.');
+    if(currentStage!==FINAL_STAGE||!recoveryReady)return showToast('Lihat hasil lingkungan hijau terlebih dahulu.');
     go('quiz');
   });
 
@@ -430,7 +442,7 @@
     const correct=answers.reduce((n,a,i)=>n+(a===questions[i].a?1:0),0),score=correct*20;
     $('scoreValue').textContent=score;$('correctValue').textContent=`${correct}/5`;
     $('resultLabel').textContent=score>=80?'Sangat Baik':score>=60?'Baik':'Perlu Ulang';
-    $('resultMessage').textContent=score>=80?'Kamu memahami hubungan aktivitas manusia, emisi, dampak lingkungan, energi bersih, dan penghijauan dengan sangat baik.':score>=60?'Pemahaman dasarmu sudah baik. Coba ulangi bagian AR yang masih kurang jelas.':'Ulangi lima tahap AR dan perhatikan bagaimana kondisi lokasi berubah.';
+    $('resultMessage').textContent=score>=80?'Kamu memahami hubungan aktivitas manusia, emisi, dampak lingkungan, energi bersih, dan penghijauan dengan sangat baik.':score>=60?'Pemahaman dasarmu sudah baik. Coba ulangi bagian AR yang masih kurang jelas.':'Ulangi enam tahap AR dan perhatikan bagaimana kondisi lokasi berubah.';
     document.querySelector('.score-ring').style.background=`conic-gradient(var(--green) ${score*3.6}deg,#e6eee9 0deg)`;
     localStorage.setItem('climateARScore',String(score));go('result');
   }

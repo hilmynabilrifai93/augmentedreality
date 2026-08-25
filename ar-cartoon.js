@@ -72,6 +72,11 @@ const TRACK_TAG_SIZE_M=.060;
 const TERRAIN_FOOTPRINT_DEPTH=1.12;
 const INITIAL_USER_SCALE=1;
 const MARKER_COVERAGE_MARGIN=1.08;
+const AR_WORLD_SIZE_MULTIPLIER=1.45;
+const STAGE_COUNT=6;
+const SEVERE_STAGE=3;
+const RECOVERY_STAGE=4;
+const FINAL_STAGE=5;
 
 // Board coordinates: x right, y down, z into board.
 // Must match climate-tracking-board-v13.png printed at 180 x 120 mm.
@@ -86,7 +91,7 @@ const TRACK_TAG_LAYOUT={
 // safety margin so the solid diorama base fully hides the black/white QR area
 // on the very first lock. Width remains proportional (~100 mm).
 const TRACKING_WORLD_SCALE=
-  (TRACK_TAG_SIZE_M*MARKER_COVERAGE_MARGIN)/
+  (TRACK_TAG_SIZE_M*MARKER_COVERAGE_MARGIN*AR_WORLD_SIZE_MULTIPLIER)/
   (TERRAIN_FOOTPRINT_DEPTH*INITIAL_USER_SCALE);
 const BOARD_SURFACE_OFFSET_M=.003; // lift ~4 mm above board plane: visually attached, not buried
 const USER_ZOOM_MIN=.55;
@@ -498,15 +503,17 @@ function makeTerrain(stage){
   const rng=seeded(810+stage*23);
 
   const polluted=isPollutedStage(stage);
+  const stressed=stage===2;
   const healthy=new THREE.Color(
     polluted ? 0x765c45 :
+    stressed ? 0x85805a :
     stage===1 ? 0x78905d :
-    stage===4 ? 0x67b166 :
+    stage===FINAL_STAGE ? 0x67b166 :
     stage===0 ? 0x789a63 : 0x6aa95f
   );
   const dry=new THREE.Color(0xae8050);
   const rock=new THREE.Color(0x6f806e);
-  const lightGrass=new THREE.Color(stage===4?0x91cf78:0x82c770);
+  const lightGrass=new THREE.Color(stage===FINAL_STAGE?0x91cf78:stressed?0xa99a62:0x82c770);
 
   const peak=(x,c,w,h)=>Math.exp(-Math.pow((x-c)/w,2))*h;
 
@@ -545,6 +552,7 @@ function makeTerrain(stage){
     p.setZ(i,h);
 
     let c=(polluted?dry:healthy).clone();
+    if(stressed)c.lerp(dry,.28);
     const alt=clamp((h+.008)/.09,0,1);
     if(!polluted)c.lerp(lightGrass,alt*.36);
     if(alt>.68)c.lerp(rock,THREE.MathUtils.smoothstep(alt,.68,1)*.35);
@@ -581,7 +589,7 @@ function makeTerrain(stage){
   const soil=mesh(
     rb(1.77,.115,1.17,.060,6),
     realisticMat(
-      polluted?0x654a36:stage===4?0x765a40:0x806047,
+      polluted?0x654a36:stage===FINAL_STAGE?0x765a40:stressed?0x7a5b43:0x806047,
       'soil',
       {roughness:.98}
     ),
@@ -593,7 +601,7 @@ function makeTerrain(stage){
   const grassRim=mesh(
     rb(1.80,.040,1.20,.068,6),
     realisticMat(
-      polluted?0x554b3d:stage===4?0x4f7948:0x486a42,
+      polluted?0x554b3d:stage===FINAL_STAGE?0x4f7948:stressed?0x666044:0x486a42,
       polluted?'soil':'grass',
       {roughness:.96}
     ),
@@ -611,10 +619,10 @@ function makeTerrain(stage){
   shadowBase.name='terrainBase';
   world.add(shadowBase);
 }
-function isPollutedStage(stage){return stage===2||stage===3}
+function isPollutedStage(stage){return stage===SEVERE_STAGE||stage===RECOVERY_STAGE}
 function makeBackdropTexture(stage){
   const c=document.createElement('canvas');c.width=768;c.height=360;
-  const x=c.getContext('2d'),polluted=isPollutedStage(stage),recovered=stage===4;
+  const x=c.getContext('2d'),polluted=isPollutedStage(stage),recovered=stage===FINAL_STAGE;
   const sky=x.createLinearGradient(0,0,0,c.height);
   if(polluted){sky.addColorStop(0,'#302e2c');sky.addColorStop(.52,'#655d53');sky.addColorStop(1,'#9a7353')}
   else if(recovered){sky.addColorStop(0,'#65bfe8');sky.addColorStop(.58,'#bcecff');sky.addColorStop(1,'#eefbdc')}
@@ -651,9 +659,10 @@ function terrainSpotIsClear(x,z,stage,padding=.04){
   const houses=HOUSE_LAYOUT.map(h=>[h.x,h.z,h.s>.10?.17:.15]);
   if(houses.some(([hx,hz,r])=>Math.hypot(x-hx,z-hz)<r+padding))return false;
 
-  if(stage>=1&&stage<4){
+  if(stage>=1&&stage<FINAL_STAGE){
     // Industrial zone is rear-right and stays off the road.
-    if(Math.hypot(x-.52,z-.20)<.30+padding)return false;
+    if(Math.hypot(x-.52,z-.20)<.34+padding)return false;
+    if(stage>=2&&Math.hypot(x-.27,z-.31)<.20+padding)return false;
   }
   return Math.abs(x)<.76&&Math.abs(z)<.45;
 }
@@ -711,7 +720,7 @@ function addMountainBackdrop(stage){
   world.add(group);
 
   const polluted=isPollutedStage(stage);
-  const recovered=stage===4;
+  const recovered=stage===FINAL_STAGE;
 
   const mountainColors=polluted
     ? [0x685a4d,0x756352,0x5d5148,0x725f4e,0x665548]
@@ -868,7 +877,7 @@ function addRiver(stage){
   const bed=mesh(
     new THREE.ShapeGeometry(shape,40),
     realisticMat(
-      polluted?0x55483b:stage===4?0x627b70:0x5d756d,
+      polluted?0x55483b:stage===FINAL_STAGE?0x627b70:stage===2?0x697064:0x5d756d,
       polluted?'soil':'stone',
       {roughness:.98,bumpScale:.006}
     ),
@@ -881,7 +890,7 @@ function addRiver(stage){
 
   const mat=polluted
     ? new THREE.MeshPhysicalMaterial({
-        color:stage===3?0x6f725f:0x5c6257,
+        color:stage===RECOVERY_STAGE?0x6f725f:0x5c6257,
         transparent:true,
         opacity:.72,
         roughness:.38,
@@ -896,7 +905,7 @@ function addRiver(stage){
       })
     : realisticWaterMaterial();
 
-  if(stage===4){
+  if(stage===FINAL_STAGE){
     mat.color.setHex(0x45aabd);
     mat.opacity=.77;
   }
@@ -1860,16 +1869,14 @@ function buildRealisticMotorbike(color=0x4c5960){
     const tyre=mesh(
       new THREE.TorusGeometry(.019,.0052,12,28),
       tire,
-      [0,0,0],
-      [Math.PI/2,0,0]
+      [0,0,0]
     );
     wheelGroup.add(tyre);
 
     const rim=mesh(
       new THREE.TorusGeometry(.011,.0018,8,24),
       metal,
-      [0,0,0],
-      [Math.PI/2,0,0]
+      [0,0,0]
     );
     wheelGroup.add(rim);
 
@@ -1893,6 +1900,11 @@ function buildRealisticMotorbike(color=0x4c5960){
     }
 
     g.add(wheelGroup);
+    // TorusGeometry already lies in the XY plane, so its axle is local Z.
+    // Keeping that native orientation lets the complete wheel rotate around
+    // its own hub instead of appearing to orbit/detach from the motorcycle.
+    wheelGroup.userData.rollAxis='z';
+    wheelGroup.userData.radius=.0242;
     g.userData.wheels.push(wheelGroup);
   }
 
@@ -2092,6 +2104,24 @@ function buildRealisticMotorbike(color=0x4c5960){
   return g;
 }
 
+function addJointedSegment(parent,start,end,radiusTop,radiusBottom,material,segments=10){
+  const a=new THREE.Vector3(...start);
+  const b=new THREE.Vector3(...end);
+  const direction=b.clone().sub(a);
+  const length=direction.length();
+  const segment=mesh(
+    new THREE.CylinderGeometry(radiusTop,radiusBottom,length,segments),
+    material,
+    a.clone().add(b).multiplyScalar(.5).toArray()
+  );
+  segment.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0,1,0),
+    direction.normalize()
+  );
+  parent.add(segment);
+  return segment;
+}
+
 
 function addRealisticMotorbikeRider(bike,shirt=0x526b79){
   const rider=new THREE.Group();
@@ -2177,61 +2207,33 @@ function addRealisticMotorbikeRider(bike,shirt=0x526b79){
   visor.castShadow=false;
   rider.add(visor);
 
-  // Arms reach the handlebar.
+  // Joint-to-joint limbs keep every segment physically connected while the
+  // motorcycle moves. Hands terminate exactly at the two handlebar grips.
   for(const side of [-1,1]){
-    const z=side*.014;
-
-    const upperArm=mesh(
-      new THREE.CylinderGeometry(.0045,.0055,.044,10),
-      cloth,
-      [-.018,.137,z],
-      [Math.PI/2,0,-.78]
-    );
-    rider.add(upperArm);
-
-    const foreArm=mesh(
-      new THREE.CylinderGeometry(.004,.0048,.040,10),
-      skin,
-      [-.031,.119,z*1.35],
-      [Math.PI/2,0,-.38]
-    );
-    rider.add(foreArm);
-
-    // Hand near grip.
-    rider.add(mesh(
-      new THREE.SphereGeometry(.0055,10,8),
-      skin,
-      [-.036,.107,z*1.65]
-    ));
+    const shoulder=[-.016,.148,side*.013];
+    const elbow=[-.029,.130,side*.019];
+    const hand=[-.036,.107,side*.027];
+    addJointedSegment(rider,shoulder,elbow,.0046,.0057,cloth,11);
+    addJointedSegment(rider,elbow,hand,.0039,.0048,skin,11);
+    rider.add(mesh(new THREE.SphereGeometry(.0058,12,9),skin,hand));
+    rider.add(mesh(new THREE.SphereGeometry(.0054,12,9),cloth,shoulder));
+    rider.add(mesh(new THREE.SphereGeometry(.0048,12,9),skin,elbow));
   }
 
-  // Bent riding legs: thigh slopes forward/down, shin reaches footpeg.
+  // Bent riding legs: hip -> knee -> ankle, with each shoe touching its peg.
   for(const side of [-1,1]){
-    const z=side*.014;
-
-    const thigh=mesh(
-      new THREE.CylinderGeometry(.006,.007,.052,10),
-      pants,
-      [.008,.072,z],
-      [Math.PI/2,0,-.78]
-    );
-    rider.add(thigh);
-
-    const shin=mesh(
-      new THREE.CylinderGeometry(.0055,.0065,.047,10),
-      pants,
-      [-.010,.048,z*1.25],
-      [Math.PI/2,0,.48]
-    );
-    rider.add(shin);
-
-    const foot=mesh(
-      rb(.024,.008,.012,.003,2),
+    const hipJoint=[.014,.094,side*.011];
+    const knee=[-.002,.061,side*.018];
+    const ankle=[-.017,.034,side*.020];
+    addJointedSegment(rider,hipJoint,knee,.0062,.0072,pants,12);
+    addJointedSegment(rider,knee,ankle,.0054,.0064,pants,12);
+    rider.add(mesh(new THREE.SphereGeometry(.0065,12,9),pants,knee));
+    rider.add(mesh(
+      rb(.026,.009,.013,.003,2),
       shoe,
-      [-.018,.032,z*1.45],
-      [0,0,-.05]
-    );
-    rider.add(foot);
+      [-.026,.032,side*.020],
+      [0,0,-.04]
+    ));
   }
 
   bike.add(rider);
@@ -2263,29 +2265,44 @@ function addRealisticMotorbike(x,z,color=0x4c5960,moving=true){
   return g;
 }
 
-function buildRealisticHuman(shirt=0x5d7180,pose='walk'){
+function buildRealisticHuman(shirt=0x5d7180,pose='walk',pantsColor=0x303a3d){
   const g=new THREE.Group();
   const skin=new THREE.MeshStandardMaterial({color:0xb98666,roughness:.86});
   const cloth=new THREE.MeshStandardMaterial({color:shirt,roughness:.90});
-  const pants=new THREE.MeshStandardMaterial({color:0x303a3d,roughness:.94});
+  const pants=new THREE.MeshStandardMaterial({color:pantsColor,roughness:.94});
   const shoe=new THREE.MeshStandardMaterial({color:0x232625,roughness:.90});
 
   // Core Three.js geometries only: safe with current importmap.
   const torso=mesh(rb(.046,.075,.030,.012,4),cloth,[0,.122,0]);g.add(torso);
   const head=mesh(new THREE.SphereGeometry(.025,18,14),skin,[0,.180,0],[0,0,0],[.92,1.08,.95]);g.add(head);
 
-  const armL=mesh(new THREE.CylinderGeometry(.0065,.0075,.060,10),skin,[-.030,.119,0]);
-  const armR=mesh(new THREE.CylinderGeometry(.0065,.0075,.060,10),skin,[.030,.119,0]);
-  const legL=mesh(new THREE.CylinderGeometry(.008,.009,.066,10),pants,[-.013,.050,0]);
-  const legR=mesh(new THREE.CylinderGeometry(.008,.009,.066,10),pants,[.013,.050,0]);
-  g.add(armL,armR,legL,legR);
+  const makeArm=x=>{
+    const pivot=new THREE.Group();
+    pivot.position.set(x,.147,0);
+    const arm=mesh(new THREE.CylinderGeometry(.0065,.0075,.062,10),skin,[0,-.031,0]);
+    const hand=mesh(new THREE.SphereGeometry(.0073,12,9),skin,[0,-.064,0]);
+    const shoulder=mesh(new THREE.SphereGeometry(.0082,12,9),cloth,[0,0,0]);
+    pivot.add(arm,hand,shoulder);g.add(pivot);
+    return pivot;
+  };
+  const makeLeg=x=>{
+    const pivot=new THREE.Group();
+    pivot.position.set(x,.083,0);
+    const leg=mesh(new THREE.CylinderGeometry(.008,.009,.070,10),pants,[0,-.035,0]);
+    const foot=mesh(rb(.026,.010,.043,.004,2),shoe,[0,-.071,.010]);
+    const hipJoint=mesh(new THREE.SphereGeometry(.009,12,9),pants,[0,0,0]);
+    pivot.add(leg,foot,hipJoint);g.add(pivot);
+    return pivot;
+  };
 
-  g.add(mesh(rb(.026,.010,.043,.004,2),shoe,[-.013,.011,.009]));
-  g.add(mesh(rb(.026,.010,.043,.004,2),shoe,[.013,.011,.009]));
+  const armL=makeArm(-.030),armR=makeArm(.030);
+  const legL=makeLeg(-.013),legR=makeLeg(.013);
 
   if(pose==='walk'){
-    armL.rotation.z=.25;armR.rotation.z=-.25;
-    legL.rotation.z=-.10;legR.rotation.z=.10;
+    // The character's forward direction is local Z. Rotating around local X
+    // produces a natural forward/back gait; local Z rotation looked sideways.
+    armL.rotation.x=.25;armR.rotation.x=-.25;
+    legL.rotation.x=-.10;legR.rotation.x=.10;
   }
   if(pose==='work'){armL.rotation.z=.55;armR.rotation.z=-.55;}
   g.userData.limbs={armL,armR,legL,legR};
@@ -2604,16 +2621,7 @@ function addMotorbike(x,z,color=0xe87548,moving=true){
   return g;
 }
 function buildHuman(shirt=0x4f8fbd,pants=0x3d4d59,pose='walk'){
-  const g=new THREE.Group();
-  addCyl(g,.015,.020,.075,pants,[0,.038,0],10);
-  addBox(g,[.055,.075,.034],shirt,[0,.115,0],[0,0,0],.012,true);
-  const head=mesh(new THREE.SphereGeometry(.031,16,12),toon(0xe0ae82),[0,.177,0]);g.add(head);
-  const armL=addCyl(g,.008,.009,.065,0xe0ae82,[-.036,.118,0],8);const armR=addCyl(g,.008,.009,.065,0xe0ae82,[.036,.118,0],8);
-  const legL=addCyl(g,.009,.011,.070,pants,[-.016,.035,0],8);const legR=addCyl(g,.009,.011,.070,pants,[.016,.035,0],8);
-  if(pose==='walk'){armL.rotation.z=.35;armR.rotation.z=-.35;legL.rotation.z=-.16;legR.rotation.z=.16}
-  if(pose==='work'){armL.rotation.z=.75;armR.rotation.z=-.75}
-  g.userData.limbs={armL,armR,legL,legR};
-  return g;
+  return buildRealisticHuman(shirt,pose,pants);
 }
 function addHuman(x,z,s=.72,shirt=0x4f8fbd,pose='walk'){
   const g=buildHuman(shirt,0x394b55,pose);
@@ -3010,7 +3018,7 @@ function registerPlacedAnimations(){
 
 function addNature(stage){
   const rng=seeded(410+stage*19);
-  const polluted=isPollutedStage(stage),recovered=stage===4;
+  const polluted=isPollutedStage(stage),recovered=stage===FINAL_STAGE;
   const planted=[];
   const treeCount=recovered?(QUALITY==='lite'?23:34):stage===0?(QUALITY==='lite'?18:28):stage===1?(QUALITY==='lite'?11:17):(QUALITY==='lite'?6:9);
   for(let i=0;i<treeCount;i++){
@@ -3033,7 +3041,7 @@ function addBridge(stage){
   bridge.position.set(-.015,0,ROAD_Z);
   world.add(bridge);
 
-  const stone=polluted?0x716357:stage===4?0xc7c7b4:0xb9b39e;
+  const stone=polluted?0x716357:stage===FINAL_STAGE?0xc7c7b4:0xb9b39e;
 
   // Deck aligned with the road, slightly emphasized over the river.
   addBox(bridge,[.245,.028,.183],stone,[0,.050,0],[0,0,0],.016,true);
@@ -3042,7 +3050,7 @@ function addBridge(stage){
   addBox(
     bridge,
     [.225,.009,.145],
-    stage===4?0x445854:0x2b3432,
+    stage===FINAL_STAGE?0x445854:0x2b3432,
     [0,.071,0],
     [0,0,0],
     .008
@@ -3127,7 +3135,7 @@ function addEcoDetails(stage){
   addBox(sign,[.115,.065,.012],polluted?0x75604b:0x8a613e,[0,.118,0],[0,0,0],.006,true);
 
   // Right community / recycling corner in healthy future.
-  if(stage===4){
+  if(stage===FINAL_STAGE){
     const bins=buildWasteStation(.70);
     bins.position.set(.56,.018,-.20);
     world.add(bins);
@@ -3211,7 +3219,7 @@ function addFlowerPatch(x,z,scale=1,recovered=false){
 
 function addLivingDepthDetails(stage){
   const polluted=isPollutedStage(stage);
-  const recovered=stage===4;
+  const recovered=stage===FINAL_STAGE;
 
   // Street furniture creates foreground/midground vertical cues.
   if(!polluted){
@@ -3240,7 +3248,7 @@ function addLivingDepthDetails(stage){
       [.11,.337,.032],[.31,.326,.035],[.66,.315,.030]
     ];
     for(const [x,z,s] of backTrees){
-      if(stage>=1&&stage<4&&x>.34)continue; // keep factory readable
+      if(stage>=1&&stage<FINAL_STAGE&&x>.24)continue; // keep expanded factory area readable
       if(terrainSpotIsClear(x,z,stage,.012)){
         addRealisticTree(x,z,s);
       }
@@ -3254,9 +3262,10 @@ function addLivingDepthDetails(stage){
 // Internal stages:
 // 0 = Alam Asri
 // 1 = Aktivitas Manusia
-// 2 = Emisi Tinggi
-// 3 = Transformasi / drag solutions
-// 4 = Kota Hijau
+// 2 = Aktivitas Semakin Padat
+// 3 = Emisi Sangat Tinggi
+// 4 = Transformasi / drag solutions
+// 5 = Kota Hijau
 // ===========================================================================
 
 function buildRealisticDeadTreeModel(scale=.075){
@@ -3308,12 +3317,13 @@ function addRealisticNatureForStage(stage){
 
   const rng=seeded(1510+stage*79);
   const polluted=isPollutedStage(stage);
-  const recovered=stage===4;
+  const recovered=stage===FINAL_STAGE;
 
   const treeCount=
     stage===1 ? (QUALITY==='lite'?9:14) :
-    stage===2 ? (QUALITY==='lite'?5:8) :
-    stage===3 ? (QUALITY==='lite'?5:8) :
+    stage===2 ? (QUALITY==='lite'?7:11) :
+    stage===3 ? (QUALITY==='lite'?4:7) :
+    stage===4 ? (QUALITY==='lite'?4:7) :
     (QUALITY==='lite'?16:24);
 
   const planted=[];
@@ -3334,7 +3344,7 @@ function addRealisticNatureForStage(stage){
     if(planted.some(p=>Math.hypot(x-p.x,z-p.z)<.110))continue;
 
     // In damaged stages a fraction of vegetation becomes bare/dead.
-    if(polluted && rng()<.37){
+    if(polluted && rng()<(stage===SEVERE_STAGE?.55:.42)){
       addRealisticDeadTree(x,z,.048+rng()*.022);
     }else{
       addRealisticTree(x,z,.043+rng()*.026);
@@ -3385,7 +3395,30 @@ function addRealisticNatureForStage(stage){
 function addRealisticHouseForStage(x,z,s,stage){
   const house=addRealisticHouse(x,z,s);
 
-  if(stage===2||stage===3){
+  // Residential electricity demand rises visibly in three steps. The outdoor
+  // condenser units make "penggunaan AC meningkat" readable directly in AR.
+  const acCount=
+    stage===1 ? (x<0?1:0) :
+    stage===2 ? 1 :
+    (stage===SEVERE_STAGE||stage===RECOVERY_STAGE) ? 2 : 0;
+  const k=s/.13;
+  for(let i=0;i<acCount;i++){
+    const ac=new THREE.Group();
+    ac.name='airConditioner';
+    ac.position.set((-.072+i*.070)*k,.075*k,.103*k);
+    house.add(ac);
+    const casing=new THREE.MeshStandardMaterial({color:0xd9ded8,roughness:.68,metalness:.12});
+    const grille=new THREE.MeshStandardMaterial({color:0x59625f,roughness:.70,metalness:.34});
+    ac.add(mesh(rb(.052*k,.037*k,.018*k,.004,3),casing,[0,0,0]));
+    const fan=mesh(new THREE.TorusGeometry(.012*k,.0026*k,7,18),grille,[0,0,.011*k]);
+    fan.castShadow=false;ac.add(fan);
+    for(let blade=0;blade<4;blade++){
+      const fin=mesh(rb(.003*k,.017*k,.002*k,.001,1),grille,[0,0,.012*k],[0,0,blade*Math.PI/2]);
+      fin.castShadow=false;ac.add(fin);
+    }
+  }
+
+  if(stage===SEVERE_STAGE||stage===RECOVERY_STAGE){
     // Small soot/dust details on industrial stages.
     const stainMat=new THREE.MeshStandardMaterial({
       color:0x554a43,
@@ -3404,7 +3437,7 @@ function addRealisticHouseForStage(x,z,s,stage){
     house.add(stain);
   }
 
-  if(stage===4){
+  if(stage===FINAL_STAGE){
     // Final stage: rooftop photovoltaic panel as part of green-city visual.
     const solar=buildRealisticSolarPanel(.44*(s/.13));
     solar.position.set(.018*(s/.13),.285*(s/.13),-.005);
@@ -3417,7 +3450,7 @@ function addRealisticHouseForStage(x,z,s,stage){
 
 function addRealisticRoadForStage(stage){
   const polluted=isPollutedStage(stage);
-  const recovered=stage===4;
+  const recovered=stage===FINAL_STAGE;
 
   const asphaltColor=
     polluted ? 0x3e403d :
@@ -3502,7 +3535,7 @@ function addRealisticRoadForStage(stage){
 
 function addRealisticBridgeForStage(stage){
   const polluted=isPollutedStage(stage);
-  const recovered=stage===4;
+  const recovered=stage===FINAL_STAGE;
 
   const g=new THREE.Group();
   g.name='riverBridge';
@@ -3623,11 +3656,12 @@ function buildRealisticSolarPanel(scale=1){
   return g;
 }
 
-function buildRealisticFactory(stage=1){
+function buildRealisticFactory(stage=1,{x=.52,z=.20,scale=1,smokeScale=1}={}){
   const polluted=isPollutedStage(stage);
   const g=new THREE.Group();
   g.name='factory';
-  g.position.set(.52,0,.20);
+  g.position.set(x,0,z);
+  g.scale.setScalar(scale);
   world.add(g);
 
   const concrete=realisticMat(
@@ -3665,6 +3699,14 @@ function buildRealisticFactory(stage=1){
     rb(.19,.08,.12,.010,4),
     sideConcrete,
     [-.18,.045,-.02]
+  ));
+
+  // Wider production hall: keeps the factory legible and fixes the formerly
+  // cramped silhouette when viewed from an oblique phone camera angle.
+  g.add(mesh(
+    rb(.16,.105,.15,.009,4),
+    concrete,
+    [.185,.060,-.005]
   ));
 
   // Three industrial saw-tooth roof sections.
@@ -3717,7 +3759,7 @@ function buildRealisticFactory(stage=1){
     addSmokeEmitter(
       g,
       new THREE.Vector3(x,.398,-.03),
-      polluted?1.35:.48
+      (polluted?1.35:stage===2?.88:.48)*smokeScale
     );
   }
 
@@ -3744,7 +3786,7 @@ function buildRealisticFactory(stage=1){
     [0,0,Math.PI/2]
   ));
 
-  shadowBlob(world,.52,.20,.25,.14,.13);
+  shadowBlob(world,x,z,.25*scale,.14*scale,.13);
   return g;
 }
 
@@ -3849,15 +3891,23 @@ function addRealisticTrafficForStage(stage){
   if(stage===1){
     addRealisticCar(-.34,ROAD_Z-.040,0x8b7566,true);
     addRealisticCar(.02,ROAD_Z+.040,0x6b7d87,true);
-    addRealisticCar(.34,ROAD_Z-.040,0x8e8270,true);
     addRealisticMotorbike(.48,ROAD_Z+.040,0x59666c,true);
-  }else if(stage===2||stage===3){
-    // Slightly denser traffic to support the emissions narrative.
+  }else if(stage===2){
+    addRealisticCar(-.42,ROAD_Z-.040,0x776e68,true);
+    addRealisticCar(-.10,ROAD_Z+.040,0x817463,true);
+    addRealisticCar(.24,ROAD_Z-.040,0x65747a,true);
+    addRealisticCar(.48,ROAD_Z+.040,0x75685e,true);
+    addRealisticMotorbike(.10,ROAD_Z+.040,0x596268,true);
+    addRealisticMotorbike(.36,ROAD_Z-.040,0x4f585d,true);
+  }else if(stage===SEVERE_STAGE||stage===RECOVERY_STAGE){
+    // Peak traffic is only reached after the medium-pressure stage.
     addRealisticCar(-.42,ROAD_Z-.040,0x6f6965,true);
     addRealisticCar(-.12,ROAD_Z+.040,0x817463,true);
     addRealisticCar(.18,ROAD_Z-.040,0x65747a,true);
     addRealisticCar(.44,ROAD_Z+.040,0x75685e,true);
     addRealisticMotorbike(.30,ROAD_Z-.040,0x555d61,true);
+    addRealisticMotorbike(-.30,ROAD_Z+.040,0x4c555a,true);
+    addRealisticMotorbike(.55,ROAD_Z-.040,0x5c514b,true);
   }
 }
 
@@ -3888,15 +3938,13 @@ function buildRealisticBicycle(){
     wg.add(mesh(
       new THREE.TorusGeometry(.021,.0036,10,28),
       tire,
-      [0,0,0],
-      [Math.PI/2,0,0]
+      [0,0,0]
     ));
 
     wg.add(mesh(
       new THREE.TorusGeometry(.014,.0012,8,24),
       metal,
-      [0,0,0],
-      [Math.PI/2,0,0]
+      [0,0,0]
     ));
 
     for(let i=0;i<10;i++){
@@ -4042,14 +4090,14 @@ function addRealisticFinalEcoDetails(){
 
 function buildStage(stage){
   const preserveSolutions =
-    (stage===3 || stage===4) &&
+    (stage===RECOVERY_STAGE || stage===FINAL_STAGE) &&
     placedGroup &&
     placedGroup.children.length>0;
 
   clearWorld(preserveSolutions);
   currentStage=stage;
 
-  // Environment foundation: now PBR in all five stages.
+  // Environment foundation: PBR across six gradual story stages.
   makeTerrain(stage);
   addStageBackdrop(stage);
   addMountainBackdrop(stage);
@@ -4103,7 +4151,7 @@ function buildStage(stage){
   if(stage===1){
     addRealisticRoadForStage(stage);
     addRealisticBridgeForStage(stage);
-    buildRealisticFactory(stage);
+    buildRealisticFactory(stage,{x:.52,z:.20,scale:1.08});
 
     addRealisticTrafficForStage(stage);
     addRealisticWasteChaos(stage);
@@ -4113,12 +4161,28 @@ function buildStage(stage){
   }
 
   // -----------------------------------------------------------------------
-  // TAHAP 3 — EMISI TINGGI
+  // TAHAP 3 — TEKANAN SEDANG (BELUM LANGSUNG COKELAT/PARAH)
   // -----------------------------------------------------------------------
   if(stage===2){
     addRealisticRoadForStage(stage);
     addRealisticBridgeForStage(stage);
-    buildRealisticFactory(stage);
+    buildRealisticFactory(stage,{x:.54,z:.18,scale:1.14,smokeScale:1.05});
+    buildRealisticFactory(stage,{x:.27,z:.31,scale:.60,smokeScale:.72});
+
+    addRealisticTrafficForStage(stage);
+    addRealisticWasteChaos(stage);
+    addRealisticIndustrialPedestrians(stage);
+    addRealisticDeadTree(-.57,.13,.061);
+  }
+
+  // -----------------------------------------------------------------------
+  // TAHAP 4 — EMISI SANGAT TINGGI
+  // -----------------------------------------------------------------------
+  if(stage===SEVERE_STAGE){
+    addRealisticRoadForStage(stage);
+    addRealisticBridgeForStage(stage);
+    buildRealisticFactory(stage,{x:.54,z:.18,scale:1.18,smokeScale:1.18});
+    buildRealisticFactory(stage,{x:.26,z:.31,scale:.68,smokeScale:.94});
 
     addRealisticTrafficForStage(stage);
     addRealisticWasteChaos(stage);
@@ -4131,12 +4195,13 @@ function buildStage(stage){
   }
 
   // -----------------------------------------------------------------------
-  // TAHAP 4 — TRANSFORMASI / USER MENEMPATKAN 8 SOLUSI
+  // TAHAP 5 — TRANSFORMASI / USER MENEMPATKAN 8 SOLUSI
   // -----------------------------------------------------------------------
-  if(stage===3){
+  if(stage===RECOVERY_STAGE){
     addRealisticRoadForStage(stage);
     addRealisticBridgeForStage(stage);
-    buildRealisticFactory(stage);
+    buildRealisticFactory(stage,{x:.54,z:.18,scale:1.18,smokeScale:1.12});
+    buildRealisticFactory(stage,{x:.26,z:.31,scale:.68,smokeScale:.90});
 
     addRealisticTrafficForStage(stage);
     addRealisticWasteChaos(stage);
@@ -4153,9 +4218,9 @@ function buildStage(stage){
   }
 
   // -----------------------------------------------------------------------
-  // TAHAP 5 — KOTA HIJAU / FINAL
+  // TAHAP 6 — KOTA HIJAU / FINAL
   // -----------------------------------------------------------------------
-  if(stage===4){
+  if(stage===FINAL_STAGE){
     addRealisticRoadForStage(stage);
     addRealisticBridgeForStage(stage);
 
@@ -4165,7 +4230,7 @@ function buildStage(stage){
     addRealisticMotorbike(.49,ROAD_Z-.040,0x557b82,true);
     addRealisticCyclist(-.02,ROAD_Z+.008,true);
 
-    // Preserve every successfully placed solution from Tahap 4.
+    // Preserve every successfully placed solution from Tahap 5.
     if(placedGroup.parent!==world)world.add(placedGroup);
     registerPlacedAnimations();
 
@@ -4190,7 +4255,8 @@ function buildStage(stage){
 }
 function previewBackgroundColor(stage){
   if(isPollutedStage(stage))return 0x393a38;
-  if(stage===4)return 0xbdebf4;
+  if(stage===2)return 0x9aa99a;
+  if(stage===FINAL_STAGE)return 0xbdebf4;
   return 0xd7ebf1;
 }
 function updateStageAtmosphere(stage){
@@ -5824,10 +5890,10 @@ function animate(){
       const limbs=actor.userData.limbs;
       if(limbs){
         const stride=Math.sin(t*speed*5+phase)*.42;
-        limbs.armL.rotation.z=.20+stride;
-        limbs.armR.rotation.z=-.20-stride;
-        limbs.legL.rotation.z=-stride*.38;
-        limbs.legR.rotation.z=stride*.38;
+        limbs.armL.rotation.x=.20+stride;
+        limbs.armR.rotation.x=-.20-stride;
+        limbs.legL.rotation.x=-stride*.38;
+        limbs.legR.rotation.x=stride*.38;
       }
 
       // Model faces along X according to current local walking direction.
@@ -6389,7 +6455,7 @@ function playStageEntrance(){
 }
 
 async function setStage(i){
-  const nextStage=clamp(i,0,4);
+  const nextStage=clamp(i,0,STAGE_COUNT-1);
   if(nextStage===currentStage)return;
 
   // Keep tracking, anchor pose, zoom and user rotation completely untouched.
@@ -6414,7 +6480,7 @@ function raycastTerrain(x,y){
   if(!terrainMesh||(!preview&&!running))return null;const cam=activeCamera();if(!cam)return null;activeScene()?.updateMatrixWorld(true);raycaster.setFromCamera(pointerToNDC(x,y),cam);const hit=raycaster.intersectObject(terrainMesh,false)[0];if(!hit)return null;return world.worldToLocal(hit.point.clone());
 }
 function raycastPlaced(x,y){
-  if(currentStage!==3||!placedGroup.children.length)return null;const cam=activeCamera();activeScene()?.updateMatrixWorld(true);raycaster.setFromCamera(pointerToNDC(x,y),cam);
+  if(currentStage!==RECOVERY_STAGE||!placedGroup.children.length)return null;const cam=activeCamera();activeScene()?.updateMatrixWorld(true);raycaster.setFromCamera(pointerToNDC(x,y),cam);
   const hit=raycaster.intersectObjects(placedGroup.children,true)[0];if(!hit)return null;let o=hit.object;while(o&&o.parent&&o.parent!==placedGroup&&!o.userData?.draggable)o=o.parent;if(o?.userData?.draggable)return o;if(o?.parent?.userData?.draggable)return o.parent;return null;
 }
 function placementRule(type,p,existing=null){
@@ -6575,7 +6641,7 @@ function updateRecovery(){
   const indicatorCount=Object.values(indicators).filter(Boolean).length;
   const recovery=Math.round(indicatorCount/8*100);
 
-  // Stage 4 starts around 86% emission. Each fulfilled attribute lowers
+  // Stage 5 starts around 86% emission. Each fulfilled attribute lowers
   // the visual environmental pressure until the recovered stage reaches ~22%.
   const emission=clamp(86-indicatorCount*8,22,86);
   const ready=indicatorCount===8;
@@ -6630,7 +6696,7 @@ function showDragGhost(type,x,y,valid=null,reason=''){
 }
 function hideDragGhost(){if(dragGhost)dragGhost.hidden=true;if(placementFeedback)placementFeedback.hidden=true}
 function beginPlacement(type,e,existing=null){
-  if(currentStage!==3)return;
+  if(currentStage!==RECOVERY_STAGE)return;
 
   manualOrbit=true;
   removeDragPreview();
@@ -6772,7 +6838,7 @@ function finishPlacement(){
 
 function onPointerDown(e){
   if(e.target.closest?.('.hotspot,.ar-status,.stage-chip,.live-flow-hud,.immersive-close'))return;if(!preview&&!running)return;
-  if(currentStage===3){const placed=raycastPlaced(e.clientX,e.clientY);if(placed){e.preventDefault();beginPlacement(placed.userData.type,e,placed);return}}
+  if(currentStage===RECOVERY_STAGE){const placed=raycastPlaced(e.clientX,e.clientY);if(placed){e.preventDefault();beginPlacement(placed.userData.type,e,placed);return}}
   manualOrbit=true;activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(activePointers.size===1){gestureMode='rotate';gestureStart={x:e.clientX,y:e.clientY,yaw:userYaw,pitch:userPitch}}
   else if(activePointers.size===2){const pts=[...activePointers.values()];gestureMode='pinch';gestureStart={dist:Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),scale:userScale}}
@@ -6809,7 +6875,7 @@ interactionHost?.addEventListener('pointercancel',onPointerUp,{passive:false});
 // Aset berada DI LUAR arStage, jadi listener harus langsung dipasang ke kartu aset.
 document.querySelectorAll('.asset-drag-handle').forEach(tool=>{
   tool.addEventListener('pointerdown',e=>{
-    if(currentStage!==3)return;
+    if(currentStage!==RECOVERY_STAGE)return;
     e.stopPropagation();
 
     // On touchscreens, wait for the user's direction before deciding. A

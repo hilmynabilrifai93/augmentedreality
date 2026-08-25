@@ -18,7 +18,7 @@ Versi ini merombak V5 agar pengalaman AR lebih mirip "dunia kecil keluar dari ke
 - Navigasi utama berupa **bottom dock** pada desktop, Android, dan iOS. Tombol **Scan Marker** berada di tengah.
 - 1 jari: rotate 360 derajat.
 - 2 jari: pinch zoom.
-- Tahap 4 menggunakan **drag & drop model 3D sungguhan**, bukan drag teks:
+- Tahap 5 menggunakan **drag & drop model 3D sungguhan**, bukan drag teks:
   - Panel Surya;
   - Ruang Hijau;
   - Mobil Listrik;
