@@ -71,31 +71,31 @@
     {
       title:'Aktivitas Mulai Meningkat', emission:38, kicker:'TEKANAN RINGAN',
       headline:'Kawasan mulai berkembang',
-      body:'Satu pabrik mulai aktif, kendaraan bertambah, dan beberapa rumah mulai memakai AC. Lingkungan masih hijau, tetapi tekanan mulai terlihat.',
+      body:'Dua pabrik mulai menggantikan sebagian area pepohonan, sepeda motor bertambah, dan beberapa rumah mulai memakai AC. Lingkungan masih hijau, tetapi tekanan mulai terlihat.',
       action:'Lihat Peningkatan →',
-      text:'Aktivitas pabrik mulai meningkat. Jumlah mobil dan sepeda motor bertambah, penggunaan AC di rumah mulai terlihat, tetapi tanah dan vegetasi belum langsung berubah cokelat.',
-      observe:['Aktivitas pabrik mulai meningkat','Jumlah kendaraan mulai bertambah','Penggunaan AC di rumah mulai meningkat']
+      text:'Dua pabrik mulai menggantikan sebagian ruang hijau. Jumlah mobil dan sepeda motor bertambah, penggunaan AC di rumah mulai terlihat, tetapi tanah dan vegetasi belum langsung berubah cokelat.',
+      observe:['Sebagian pepohonan berubah menjadi dua area pabrik','Jumlah sepeda motor mulai bertambah','Penggunaan AC di rumah mulai meningkat']
     },
     {
       title:'Aktivitas Semakin Padat', emission:66, kicker:'TEKANAN SEDANG',
       headline:'Sumber emisi bertambah bertahap',
-      body:'Area pabrik meluas, lalu lintas semakin ramai, unit AC bertambah, sampah mulai menumpuk, dan warna lingkungan perlahan mengering.',
+      body:'Kawasan berkembang menjadi tiga pabrik, sepeda motor semakin ramai, unit AC bertambah, sampah mulai menumpuk, dan warna lingkungan perlahan mengering.',
       action:'Lihat Kondisi Terparah →',
-      text:'Tekanan lingkungan memburuk secara bertahap. Pabrik dan cerobong bertambah, kendaraan semakin banyak, penggunaan AC meningkat, vegetasi menipis, dan tanah mulai menguning kecokelatan.',
-      observe:['Aktivitas pabrik meningkat dan kawasan industri meluas','Jumlah mobil dan sepeda motor bertambah','Penggunaan AC di rumah meningkat']
+      text:'Tekanan lingkungan memburuk secara bertahap. Jumlah pabrik, cerobong, dan sepeda motor bertambah nyata, penggunaan AC meningkat, vegetasi menipis, dan tanah mulai menguning kecokelatan.',
+      observe:['Kawasan industri meluas menjadi tiga pabrik','Jumlah sepeda motor bertambah jelas','Penggunaan AC di rumah meningkat']
     },
     {
       title:'Emisi Karbon Sangat Tinggi', emission:94, kicker:'KRISIS EMISI',
       headline:'Tekanan lingkungan mencapai puncak',
-      body:'Asap, kemacetan, sampah, penggunaan air yang tidak efisien, tanah kering, dan kerusakan vegetasi terjadi bersamaan.',
+      body:'Seluruh rumah telah berganti menjadi pabrik. Tujuh pabrik, enam sepeda motor, asap, kemacetan, sampah, tanah kering, dan kerusakan vegetasi kini terjadi bersamaan.',
       action:'Mulai Pemulihan →',
-      text:'Emisi tinggi dan perilaku tidak berkelanjutan memperburuk udara, air, tanah, vegetasi, dan kenyamanan kawasan.',
-      observe:['Asap dan kabut polusi meningkat','Tanah dan vegetasi memburuk','Lalu lintas, sampah, dan pemborosan air memperparah kondisi']
+      text:'Seluruh kawasan rumah telah berubah menjadi pabrik. Emisi tinggi dan perilaku tidak berkelanjutan memperburuk udara, air, tanah, vegetasi, dan kenyamanan kawasan.',
+      observe:['Rumah tergantikan oleh kawasan pabrik','Asap dan kabut polusi meningkat','Lalu lintas, sampah, dan pemborosan air memperparah kondisi']
     },
     {
       title:'Transformasi Kota Hijau', emission:86, kicker:'8 ATRIBUT KOTA HIJAU',
       headline:'Lengkapi delapan indikator Kota Hijau',
-      body:'Drag delapan aset 3D yang mewakili perencanaan kota, ruang terbuka hijau, konsumsi energi, pengelolaan energi, limbah 3R, bangunan hemat energi, transportasi berkelanjutan, dan komunitas hijau.',
+      body:'Kawasan masih dipenuhi pabrik. Drag delapan aset 3D untuk memulai perencanaan kota, ruang terbuka hijau, pengelolaan energi, limbah 3R, bangunan hemat energi, transportasi berkelanjutan, dan komunitas hijau.',
       action:'Lengkapi 8 Indikator',
       text:'Setiap aset mewakili satu atribut Kota Hijau. Tahap 6 terbuka setelah seluruh delapan indikator terpenuhi.',
       observe:['Perencanaan kota dan ruang terbuka hijau','Efisiensi energi, pengelolaan energi, limbah 3R, dan bangunan hemat energi','Transportasi berkelanjutan serta peran masyarakat sebagai komunitas hijau']

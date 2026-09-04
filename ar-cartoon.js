@@ -10,8 +10,10 @@ const dragGhost = document.querySelector('#dragGhost');
 const placementFeedback = document.querySelector('#placementFeedback');
 
 const PLATFORM_ANDROID=/Android/i.test(navigator.userAgent);
+const PLATFORM_MOBILE=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const qualityParam=new URLSearchParams(location.search).get('quality');
 const DEVICE_MEMORY_GB=Math.max(2,Number(navigator.deviceMemory)||4);
+const DEVICE_CPU_CORES=Math.max(2,Number(navigator.hardwareConcurrency)||4);
 const QUALITY=
   qualityParam==='fun' ? 'fun' :
   qualityParam==='lite' ? 'lite' :
@@ -21,10 +23,20 @@ const QUALITY=
 // work happens below the model layer (instancing, static matrices, frame pacing).
 const ANDROID_LIGHT_MODE=PLATFORM_ANDROID&&QUALITY==='lite';
 const ANDROID_OPTIMIZED_MODE=PLATFORM_ANDROID;
+const LIGHTWEIGHT_STAGE_TRANSITIONS=
+  qualityParam==='lite'||
+  Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches)||
+  (PLATFORM_MOBILE&&(DEVICE_MEMORY_GB<=4||DEVICE_CPU_CORES<=4));
 const ENABLE_DYNAMIC_SHADOWS=!ANDROID_LIGHT_MODE;
 const ANDROID_RENDER_INTERVAL_MS=1000/30;
 const ANDROID_LOCKED_DETECTION_INTERVAL_MS=1000/15;
 const ANDROID_SHADOW_INTERVAL_MS=125;
+
+// CSS also drops the expensive backdrop blur used by the stage-change card.
+document.documentElement.classList.toggle(
+  'lite-ar-transitions',
+  LIGHTWEIGHT_STAGE_TRANSITIONS
+);
 
 // Geometry fidelity and render resolution stay at the full profile by default.
 // The lite branch remains available only through the explicit query parameter.
@@ -204,6 +216,14 @@ const HOUSE_LAYOUT=[
   {x:-.50,z:-.125,s:.106,roofY:.202},
   {x:-.30,z:.080,s:.094,roofY:.179},
   {x:.300,z:-.115,s:.098,roofY:.186}
+];
+
+// In UI stages 4 and 5 these compact factories occupy the exact former-home
+// plots. Their roof heights are also used by the stage-5 solar placement rule.
+const REPLACEMENT_FACTORY_LAYOUT=[
+  {x:-.50,z:-.125,scale:.46,roofY:.090},
+  {x:-.30,z:.080,scale:.43,roofY:.084},
+  {x:.300,z:-.115,scale:.44,roofY:.086}
 ];
 
 const toonGradient=(()=>{
@@ -660,9 +680,13 @@ function terrainSpotIsClear(x,z,stage,padding=.04){
   if(houses.some(([hx,hz,r])=>Math.hypot(x-hx,z-hz)<r+padding))return false;
 
   if(stage>=1&&stage<FINAL_STAGE){
-    // Industrial zone is rear-right and stays off the road.
+    // The industrial footprint expands one plot at a time. Keeping these plots
+    // free of vegetation makes the story read as trees being replaced by
+    // factories, instead of looking like a terrain color swap.
     if(Math.hypot(x-.52,z-.20)<.34+padding)return false;
-    if(stage>=2&&Math.hypot(x-.27,z-.31)<.20+padding)return false;
+    if(Math.hypot(x-.27,z-.31)<.17+padding)return false;
+    if(stage>=2&&Math.hypot(x+.27,z-.29)<.18+padding)return false;
+    if(stage>=3&&Math.hypot(x+.56,z-.24)<.15+padding)return false;
   }
   return Math.abs(x)<.76&&Math.abs(z)<.45;
 }
@@ -2763,8 +2787,8 @@ function buildFactory(stage=1){
   const pipe=addCyl(g,.009,.009,.28,0x6c8b82,[-.20,.13,.11],10,[0,0,Math.PI/2]);
   shadowBlob(world,.52,.20,.25,.14,.18);return g;
 }
-function addSmokeEmitter(parent,origin,intensity=.7){
-  const count=QUALITY==='lite'?5:9;
+function addSmokeEmitter(parent,origin,intensity=.7,countOverride=null){
+  const count=countOverride??(QUALITY==='lite'?5:9);
   for(let i=0;i<count;i++){
     const puff=mesh(
       new THREE.IcosahedronGeometry(.026+rand(0,.018),1),
@@ -3320,10 +3344,10 @@ function addRealisticNatureForStage(stage){
   const recovered=stage===FINAL_STAGE;
 
   const treeCount=
-    stage===1 ? (QUALITY==='lite'?9:14) :
-    stage===2 ? (QUALITY==='lite'?7:11) :
-    stage===3 ? (QUALITY==='lite'?4:7) :
-    stage===4 ? (QUALITY==='lite'?4:7) :
+    stage===1 ? (QUALITY==='lite'?7:11) :
+    stage===2 ? (QUALITY==='lite'?5:8) :
+    stage===3 ? (QUALITY==='lite'?2:4) :
+    stage===4 ? (QUALITY==='lite'?2:4) :
     (QUALITY==='lite'?16:24);
 
   const planted=[];
@@ -3656,7 +3680,7 @@ function buildRealisticSolarPanel(scale=1){
   return g;
 }
 
-function buildRealisticFactory(stage=1,{x=.52,z=.20,scale=1,smokeScale=1}={}){
+function buildRealisticFactory(stage=1,{x=.52,z=.20,scale=1,smokeScale=1,compact=false}={}){
   const polluted=isPollutedStage(stage);
   const g=new THREE.Group();
   g.name='factory';
@@ -3684,7 +3708,7 @@ function buildRealisticFactory(stage=1,{x=.52,z=.20,scale=1,smokeScale=1}={}){
     roughness:.34,
     metalness:.76
   });
-  const tankMat=new THREE.MeshStandardMaterial({
+  const tankMat=compact?null:new THREE.MeshStandardMaterial({
     color:polluted?0x959792:0xbcc2b7,
     roughness:.38,
     metalness:.54
@@ -3701,16 +3725,18 @@ function buildRealisticFactory(stage=1,{x=.52,z=.20,scale=1,smokeScale=1}={}){
     [-.18,.045,-.02]
   ));
 
-  // Wider production hall: keeps the factory legible and fixes the formerly
-  // cramped silhouette when viewed from an oblique phone camera angle.
-  g.add(mesh(
-    rb(.16,.105,.15,.009,4),
-    concrete,
-    [.185,.060,-.005]
-  ));
+  if(!compact){
+    // Wider production hall: keeps the main factory legible from oblique views.
+    g.add(mesh(
+      rb(.16,.105,.15,.009,4),
+      concrete,
+      [.185,.060,-.005]
+    ));
+  }
 
-  // Three industrial saw-tooth roof sections.
-  for(let i=-1;i<=1;i++){
+  // Replacement factories use one roof section to reduce their GPU cost.
+  const roofSections=compact?[0]:[-1,0,1];
+  for(const i of roofSections){
     const roof=mesh(
       createGableRoofGeometry(.083,.185,.055),
       roofMat,
@@ -3738,8 +3764,8 @@ function buildRealisticFactory(stage=1,{x=.52,z=.20,scale=1,smokeScale=1}={}){
     ));
   }
 
-  // Chimneys.
-  for(const x of [-.07,.07]){
+  // One chimney is enough for the compact former-home replacements.
+  for(const x of compact?[.045]:[-.07,.07]){
     const stack=mesh(
       new THREE.CylinderGeometry(.022,.029,.235,18),
       realisticMat(polluted?0x605b56:0x7c7066,'stone',{
@@ -3759,35 +3785,50 @@ function buildRealisticFactory(stage=1,{x=.52,z=.20,scale=1,smokeScale=1}={}){
     addSmokeEmitter(
       g,
       new THREE.Vector3(x,.398,-.03),
-      (polluted?1.35:stage===2?.88:.48)*smokeScale
+      (polluted?1.35:stage===2?.88:.48)*smokeScale,
+      compact?(LIGHTWEIGHT_STAGE_TRANSITIONS?2:4):null
     );
   }
 
-  // Industrial tanks.
-  for(const x of [-.20,.20]){
-    g.add(mesh(
-      new THREE.CylinderGeometry(.044,.044,.105,20),
-      tankMat,
-      [x,.058,.11]
-    ));
+  if(!compact){
+    // Industrial tanks.
+    for(const x of [-.20,.20]){
+      g.add(mesh(
+        new THREE.CylinderGeometry(.044,.044,.105,20),
+        tankMat,
+        [x,.058,.11]
+      ));
 
+      g.add(mesh(
+        new THREE.SphereGeometry(.044,18,10,0,Math.PI*2,0,Math.PI/2),
+        tankMat,
+        [x,.111,.11]
+      ));
+    }
+
+    // Pipe network.
     g.add(mesh(
-      new THREE.SphereGeometry(.044,18,10,0,Math.PI*2,0,Math.PI/2),
-      tankMat,
-      [x,.111,.11]
+      new THREE.CylinderGeometry(.008,.008,.275,12),
+      steel,
+      [-.20,.135,.11],
+      [0,0,Math.PI/2]
     ));
   }
 
-  // Pipe network.
-  g.add(mesh(
-    new THREE.CylinderGeometry(.008,.008,.275,12),
-    steel,
-    [-.20,.135,.11],
-    [0,0,Math.PI/2]
-  ));
-
   shadowBlob(world,x,z,.25*scale,.14*scale,.13);
   return g;
+}
+
+function addFactoriesReplacingHomes(stage){
+  for(const item of REPLACEMENT_FACTORY_LAYOUT){
+    buildRealisticFactory(stage,{
+      x:item.x,
+      z:item.z,
+      scale:item.scale,
+      smokeScale:.42,
+      compact:true
+    });
+  }
 }
 
 function addRealisticWasteChaos(stage){
@@ -3892,15 +3933,18 @@ function addRealisticTrafficForStage(stage){
     addRealisticCar(-.34,ROAD_Z-.040,0x8b7566,true);
     addRealisticCar(.02,ROAD_Z+.040,0x6b7d87,true);
     addRealisticMotorbike(.48,ROAD_Z+.040,0x59666c,true);
+    addRealisticMotorbike(-.14,ROAD_Z-.040,0x6b5f58,true);
   }else if(stage===2){
     addRealisticCar(-.42,ROAD_Z-.040,0x776e68,true);
     addRealisticCar(-.10,ROAD_Z+.040,0x817463,true);
     addRealisticCar(.24,ROAD_Z-.040,0x65747a,true);
-    addRealisticCar(.48,ROAD_Z+.040,0x75685e,true);
     addRealisticMotorbike(.10,ROAD_Z+.040,0x596268,true);
     addRealisticMotorbike(.36,ROAD_Z-.040,0x4f585d,true);
+    addRealisticMotorbike(-.24,ROAD_Z+.040,0x655c55,true);
+    addRealisticMotorbike(.54,ROAD_Z+.040,0x4d5b62,true);
   }else if(stage===SEVERE_STAGE||stage===RECOVERY_STAGE){
-    // Peak traffic is only reached after the medium-pressure stage.
+    // Peak traffic: motorcycles are intentionally the most visibly increasing
+    // source, matching the requested carbon-emission progression.
     addRealisticCar(-.42,ROAD_Z-.040,0x6f6965,true);
     addRealisticCar(-.12,ROAD_Z+.040,0x817463,true);
     addRealisticCar(.18,ROAD_Z-.040,0x65747a,true);
@@ -3908,6 +3952,9 @@ function addRealisticTrafficForStage(stage){
     addRealisticMotorbike(.30,ROAD_Z-.040,0x555d61,true);
     addRealisticMotorbike(-.30,ROAD_Z+.040,0x4c555a,true);
     addRealisticMotorbike(.55,ROAD_Z-.040,0x5c514b,true);
+    addRealisticMotorbike(-.53,ROAD_Z-.040,0x4f5e63,true);
+    addRealisticMotorbike(-.02,ROAD_Z+.040,0x685b54,true);
+    addRealisticMotorbike(.18,ROAD_Z+.040,0x566269,true);
   }
 }
 
@@ -4103,9 +4150,14 @@ function buildStage(stage){
   addMountainBackdrop(stage);
   addRiver(stage);
 
-  // Houses keep the same coordinates / footprint in every stage.
-  for(const h of HOUSE_LAYOUT){
-    addRealisticHouseForStage(h.x,h.z,h.s,stage);
+  // UI stages 4 and 5 replace every residential plot with a compact factory.
+  // Other stages retain the established house positions.
+  const housesReplacedByFactories=
+    stage===SEVERE_STAGE||stage===RECOVERY_STAGE;
+  if(!housesReplacedByFactories){
+    for(const h of HOUSE_LAYOUT){
+      addRealisticHouseForStage(h.x,h.z,h.s,stage);
+    }
   }
 
   addRealisticNatureForStage(stage);
@@ -4151,7 +4203,8 @@ function buildStage(stage){
   if(stage===1){
     addRealisticRoadForStage(stage);
     addRealisticBridgeForStage(stage);
-    buildRealisticFactory(stage,{x:.52,z:.20,scale:1.08});
+    buildRealisticFactory(stage,{x:.52,z:.20,scale:1.02});
+    buildRealisticFactory(stage,{x:.27,z:.31,scale:.48,smokeScale:.62});
 
     addRealisticTrafficForStage(stage);
     addRealisticWasteChaos(stage);
@@ -4166,8 +4219,9 @@ function buildStage(stage){
   if(stage===2){
     addRealisticRoadForStage(stage);
     addRealisticBridgeForStage(stage);
-    buildRealisticFactory(stage,{x:.54,z:.18,scale:1.14,smokeScale:1.05});
-    buildRealisticFactory(stage,{x:.27,z:.31,scale:.60,smokeScale:.72});
+    buildRealisticFactory(stage,{x:.52,z:.20,scale:1.08,smokeScale:1.05});
+    buildRealisticFactory(stage,{x:.27,z:.31,scale:.56,smokeScale:.76});
+    buildRealisticFactory(stage,{x:-.27,z:.29,scale:.48,smokeScale:.68});
 
     addRealisticTrafficForStage(stage);
     addRealisticWasteChaos(stage);
@@ -4181,15 +4235,18 @@ function buildStage(stage){
   if(stage===SEVERE_STAGE){
     addRealisticRoadForStage(stage);
     addRealisticBridgeForStage(stage);
-    buildRealisticFactory(stage,{x:.54,z:.18,scale:1.18,smokeScale:1.18});
-    buildRealisticFactory(stage,{x:.26,z:.31,scale:.68,smokeScale:.94});
+    buildRealisticFactory(stage,{x:.52,z:.20,scale:1.12,smokeScale:1.20});
+    buildRealisticFactory(stage,{x:.27,z:.31,scale:.62,smokeScale:.96});
+    buildRealisticFactory(stage,{x:-.27,z:.29,scale:.55,smokeScale:.88});
+    buildRealisticFactory(stage,{x:-.56,z:.24,scale:.40,smokeScale:.72});
+    addFactoriesReplacingHomes(stage);
 
     addRealisticTrafficForStage(stage);
     addRealisticWasteChaos(stage);
     addRealisticIndustrialPedestrians(stage);
 
     addCracks();
-    addRealisticDeadTree(-.57,.13,.075);
+    addRealisticDeadTree(-.68,.05,.075);
     addRealisticDeadTree(.02,.31,.068);
     addRealisticDeadTree(-.25,-.30,.068);
   }
@@ -4200,15 +4257,18 @@ function buildStage(stage){
   if(stage===RECOVERY_STAGE){
     addRealisticRoadForStage(stage);
     addRealisticBridgeForStage(stage);
-    buildRealisticFactory(stage,{x:.54,z:.18,scale:1.18,smokeScale:1.12});
-    buildRealisticFactory(stage,{x:.26,z:.31,scale:.68,smokeScale:.90});
+    buildRealisticFactory(stage,{x:.52,z:.20,scale:1.12,smokeScale:1.12});
+    buildRealisticFactory(stage,{x:.27,z:.31,scale:.62,smokeScale:.90});
+    buildRealisticFactory(stage,{x:-.27,z:.29,scale:.55,smokeScale:.82});
+    buildRealisticFactory(stage,{x:-.56,z:.24,scale:.40,smokeScale:.68});
+    addFactoriesReplacingHomes(stage);
 
     addRealisticTrafficForStage(stage);
     addRealisticWasteChaos(stage);
     addRealisticIndustrialPedestrians(stage);
 
     addCracks();
-    addRealisticDeadTree(-.57,.13,.075);
+    addRealisticDeadTree(-.68,.05,.075);
     addRealisticDeadTree(.02,.31,.068);
     addRealisticDeadTree(-.25,-.30,.068);
 
@@ -5819,6 +5879,33 @@ function playPaperReveal(){
   if(revealed)return;
   revealed=true;
 
+  if(LIGHTWEIGHT_STAGE_TRANSITIONS){
+    // One cheap transform keeps the marker reveal readable without creating a
+    // ring mesh or updating additional transparent materials on every frame.
+    const start=performance.now();
+    const duration=400;
+    const target=userScale;
+
+    world.scale.set(target,target*.10,target);
+    world.position.y=-.012;
+
+    const tick=now=>{
+      const t=clamp((now-start)/duration,0,1);
+      const rise=THREE.MathUtils.smootherstep(t,0,1);
+      world.scale.set(target,target*THREE.MathUtils.lerp(.10,1,rise),target);
+      world.position.y=THREE.MathUtils.lerp(-.012,0,rise);
+
+      if(t<1)requestAnimationFrame(tick);
+      else{
+        world.scale.setScalar(target);
+        world.position.y=0;
+      }
+    };
+
+    requestAnimationFrame(tick);
+    return;
+  }
+
   // Keep the rising-world reveal, but do not render decorative white pages.
   // Tracking is driven by the camera detector and is independent of this effect.
   const ring=createRevealRing();
@@ -6287,6 +6374,10 @@ function collectTransitionMaterials(root){
 }
 
 function playStageExit(){
+  // The DOM transition card already masks the scene swap. On constrained
+  // phones, avoid traversing and toggling transparency on every 3D material.
+  if(LIGHTWEIGHT_STAGE_TRANSITIONS)return Promise.resolve();
+
   const items=world.children.filter(o=>o!==placedGroup);
   const mats=collectTransitionMaterials(world);
 
@@ -6347,6 +6438,10 @@ function stageEntranceStyle(obj,index){
 }
 
 function playStageEntrance(){
+  // Building the new scene is enough work on low-end GPUs. Skipping hundreds
+  // of per-frame scale/opacity writes removes the largest transition spike.
+  if(LIGHTWEIGHT_STAGE_TRANSITIONS)return Promise.resolve();
+
   const entries=[];
 
   world.children.forEach((obj,index)=>{
@@ -6462,6 +6557,11 @@ async function setStage(i){
   thawWorldMatrices();
   await playStageExit();
 
+  // Let the lightweight transition card paint before the synchronous rebuild.
+  if(LIGHTWEIGHT_STAGE_TRANSITIONS){
+    await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+  }
+
   currentStage=nextStage;
   buildStage(currentStage);
   updateStageAtmosphere(currentStage);
@@ -6492,7 +6592,10 @@ function placementRule(type,p,existing=null){
     return{valid:false,reason:'Jangan ditempatkan di sungai'};
   }
 
-  const roofs=HOUSE_LAYOUT.map(h=>({x:h.x,z:h.z,y:h.roofY}));
+  const roofs=(currentStage===RECOVERY_STAGE
+    ?REPLACEMENT_FACTORY_LAYOUT
+    :HOUSE_LAYOUT
+  ).map(item=>({x:item.x,z:item.z,y:item.roofY}));
   const radius={
     plan:.12,tree:.105,efficiency:.085,solar:.09,waste:.11,
     building:.13,ev:.11,community:.12
@@ -6511,7 +6614,7 @@ function placementRule(type,p,existing=null){
 
   if(type==='tree'){
     if(Math.abs(p.x)>.72||Math.abs(p.z)>.43)return{valid:false,reason:'Pilih area hijau di dalam diorama'};
-    if(roofs.some(r=>Math.hypot(p.x-r.x,p.z-r.z)<.12))return{valid:false,reason:'Ruang hijau tidak ditempatkan di atas rumah'};
+    if(roofs.some(r=>Math.hypot(p.x-r.x,p.z-r.z)<.12))return{valid:false,reason:'Ruang hijau tidak ditempatkan di atas bangunan'};
     if(Math.abs(p.z-ROAD_Z)<ROAD_HALF_DEPTH+.055)return{valid:false,reason:'Jangan tanam pohon di jalan'};
     return{valid:true,snap:new THREE.Vector3(p.x,p.y+.012,p.z)};
   }
@@ -6552,7 +6655,7 @@ function placementRule(type,p,existing=null){
 
   if(type==='community'){
     const nearHouse=roofs.some(r=>Math.hypot(p.x-r.x,p.z-r.z)<.27);
-    if(!nearHouse)return{valid:false,reason:'Tempatkan komunitas hijau dekat kawasan permukiman'};
+    if(!nearHouse)return{valid:false,reason:'Tempatkan komunitas hijau dekat kawasan bangunan'};
     if(Math.abs(p.z-ROAD_Z)<ROAD_HALF_DEPTH+.04)return{valid:false,reason:'Komunitas tidak ditempatkan di badan jalan'};
     return{valid:true,snap:new THREE.Vector3(p.x,p.y+.015,p.z)};
   }
@@ -7069,5 +7172,5 @@ function initToolPreviews(){
 }
 
 initAR();
-window.RealisticAR={start,stop,startPreview,stopPreview,setStage,resetRecovery,get recoveryState(){return{...recoveryState}},get running(){return running},get starting(){return Boolean(cameraStartPromise)},get preview(){return preview},quality:QUALITY};
+window.RealisticAR={start,stop,startPreview,stopPreview,setStage,resetRecovery,get recoveryState(){return{...recoveryState}},get running(){return running},get starting(){return Boolean(cameraStartPromise)},get preview(){return preview},quality:QUALITY,transitionMode:LIGHTWEIGHT_STAGE_TRANSITIONS?'lite':'full'};
 window.dispatchEvent(new CustomEvent('realistic-ar-ready'));
